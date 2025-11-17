@@ -291,3 +291,4 @@ C:\Users\Pc\Desktop\megadelicias-dotnet-angular\megadeliciasapi\megadeliciasapi\
 C:\Users\Pc\Desktop\megadelicias-dotnet-angular\megadeliciasapi\megadeliciasapi\megadeliciasapi\obj\Debug\net8.0\megadeliciasapi.pdb
 C:\Users\Pc\Desktop\megadelicias-dotnet-angular\megadeliciasapi\megadeliciasapi\megadeliciasapi\obj\Debug\net8.0\megadeliciasapi.genruntimeconfig.cache
 C:\Users\Pc\Desktop\megadelicias-dotnet-angular\megadeliciasapi\megadeliciasapi\megadeliciasapi\obj\Debug\net8.0\ref\megadeliciasapi.dll
+C:\Users\Pc\Desktop\megadelicias-dotnet-angular\megadeliciasapi\megadeliciasapi\megadeliciasapi\bin\Debug\net8.0\BCrypt.Net-Next.dll

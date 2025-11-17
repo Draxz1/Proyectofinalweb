@@ -1,0 +1,6 @@
+
+# Cache y carpetas de compilacion de .NET
+**/[Oo]bj/
+**/[Bb]in/
+**/.vs/
+
