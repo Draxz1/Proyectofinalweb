@@ -1,11 +1,6 @@
-<div class="flex">
+<div class="app-container">
+  <app-sidebar class="sidebar"></app-sidebar>
 
-  <app-sidebar></app-sidebar>
-
-  <main class="flex-1 min-w-0">
-
-    <router-outlet></router-outlet>
-
-  </main>
-
+  <div class="main-content">
+    <router-outlet></router-outlet> </div>
 </div>

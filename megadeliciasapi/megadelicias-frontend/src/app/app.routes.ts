@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
 
-// Componentes Principales
-import { LoginComponent } from './pages/login/login'; // <-- CORREGIDO
-import { RegisterComponent } from './pages/register/register'; // <-- CORREGIDO
-import { AppLayoutComponent } from './components/app-layout/app-layout'; // <-- CORREGIDO
+// Componentes Principales (FIX: Importación con nombres de archivo simples)
+import { LoginComponent } from './pages/login/login'; 
+import { RegisterComponent } from './pages/register/register'; 
+import { AppLayoutComponent } from './components/app-layout/app-layout'; 
 
-// Rutas/Paneles (Todas las rutas corregidas)
+// Paneles (Rutas dentro del Layout)
 import { DashboardComponent } from './pages/dashboard/dashboard'; 
 import { AdminUsersComponent } from './pages/admin-users/admin-users'; 
 import { MeseroPanelComponent } from './pages/mesero-panel/mesero-panel';
