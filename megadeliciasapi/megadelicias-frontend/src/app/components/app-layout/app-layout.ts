@@ -9,8 +9,8 @@ import { SidebarComponent } from '../sidebar/sidebar'; // <-- ¡Importa el Sideb
     RouterOutlet,       // <-- ¡Añádelo aquí!
     SidebarComponent    // <-- ¡Añádelo aquí!
   ],
-  templateUrl: './app-layout.component.html',
-  styleUrl: './app-layout.component.css'
+  templateUrl: './app-layout.html',
+  styleUrl: './app-layout.css'
 })
 export class AppLayoutComponent {
 
