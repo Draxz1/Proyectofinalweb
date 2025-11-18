@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http'; // <-- Para llamar a la API
-import { Router } from '@angular/router'; // <-- Para redirigir
+import { Router, RouterLink } from '@angular/router'; // <-- RouterLink para el enlace
 import { AuthService } from '../../services/auth'; // <-- El servicio de Diego
 
 // Importaciones necesarias para Standalone + Forms
@@ -10,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule], // <-- ¡Añadir CommonModule y FormsModule!
+  imports: [CommonModule, FormsModule, RouterLink], // <-- ¡Añadir CommonModule, FormsModule y RouterLink!
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -26,8 +26,7 @@ export class LoginComponent {
   authService = inject(AuthService); // Tarea de Diego
 
   // --- URL del Backend de Axel ---
-  // (Asegúrate de que el puerto 7110 sea el de tu API)
-  private apiUrl = 'https://localhost:7110/api/Auth/login'; 
+  private apiUrl = 'https://localhost:7110/api/Auth/login'; // (Revisa tu puerto)
 
   login() {
     this.error = ''; // Limpia errores anteriores
