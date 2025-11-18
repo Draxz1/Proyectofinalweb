@@ -1,6 +1,15 @@
-<div class="app-container">
-  <app-sidebar class="sidebar"></app-sidebar>
+<div class="flex min-h-screen">
 
-  <div class="main-content">
-    <router-outlet></router-outlet> </div>
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 min-w-0">
+
+    <app-topbar title="Dashboard"></app-topbar>
+
+    <div class="p-6 sm:p-8">
+      <router-outlet></router-outlet>
+    </div>
+
+  </main>
+
 </div>
