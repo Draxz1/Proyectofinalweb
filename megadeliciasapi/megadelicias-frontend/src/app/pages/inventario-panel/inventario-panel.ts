@@ -6,6 +6,6 @@ import { Component } from '@angular/core';
   templateUrl: './inventario-panel.html',
   styleUrl: './inventario-panel.css',
 })
-export class InventarioPanel {
+export class InventarioPanelComponent {
 
 }

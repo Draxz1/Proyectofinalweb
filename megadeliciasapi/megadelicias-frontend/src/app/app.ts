@@ -1,12 +1,13 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './app.html',
+  templateUrl: './app.html', 
   styleUrl: './app.css'
 })
-export class App {
-  protected readonly title = signal('megadelicias-frontend');
+export class AppComponent { // <-- FIX: Se llama AppComponent y está exportado
+  // La clase App ahora se llama AppComponent (convención estándar)
 }

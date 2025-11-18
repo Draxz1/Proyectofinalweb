@@ -1,3 +1,48 @@
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [];
+// Componentes Principales
+import { LoginComponent } from './pages/login/login'; // <-- CORREGIDO
+import { RegisterComponent } from './pages/register/register'; // <-- CORREGIDO
+import { AppLayoutComponent } from './components/app-layout/app-layout'; // <-- CORREGIDO
+
+// Rutas/Paneles (Todas las rutas corregidas)
+import { DashboardComponent } from './pages/dashboard/dashboard'; 
+import { AdminUsersComponent } from './pages/admin-users/admin-users'; 
+import { MeseroPanelComponent } from './pages/mesero-panel/mesero-panel';
+import { CocinaPanelComponent } from './pages/cocina-panel/cocina-panel';
+import { CajaPanelComponent } from './pages/caja-panel/caja-panel';
+import { InventarioPanelComponent } from './pages/inventario-panel/inventario-panel';
+import { ContabilidadComponent } from './pages/contabilidad/contabilidad';
+
+// Guard de Diego
+import { authGuard } from './guards/auth-guard'; 
+
+
+export const routes: Routes = [
+
+    // Rutas Públicas 
+    { path: 'login', component: LoginComponent },
+    { path: 'register', component: RegisterComponent },
+
+    // Rutas Privadas (Con Layout/Sidebar)
+    {
+        path: '', 
+        component: AppLayoutComponent,
+        canActivate: [authGuard], 
+        children: [
+            { path: '', redirectTo: 'dashboard', pathMatch: 'full' }, 
+            
+            { path: 'dashboard', component: DashboardComponent },
+            { path: 'admin', component: AdminUsersComponent },
+            { path: 'mesero', component: MeseroPanelComponent },
+            { path: 'cocina', component: CocinaPanelComponent },
+            { path: 'caja', component: CajaPanelComponent },
+            { path: 'inventario', component: InventarioPanelComponent },
+
+            { path: 'contabilidad', component: ContabilidadComponent },
+        ]
+    },
+
+    // Redirección General
+    { path: '**', redirectTo: 'login' }
+];

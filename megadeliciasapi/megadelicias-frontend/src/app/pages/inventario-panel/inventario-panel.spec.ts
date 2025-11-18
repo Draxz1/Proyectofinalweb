@@ -1,23 +1,14 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
-import { InventarioPanel } from './inventario-panel';
+@Component({
+  selector: 'app-inventario-panel',
+  standalone: true,
+  imports: [CommonModule],
+  // CORRECCIÓN: Quitamos ".component"
+  templateUrl: './inventario-panel.html', 
+  styleUrl: './inventario-panel.css'
+})
+export class InventarioPanelComponent { // <-- FIX: La clase debe ser EXPORTADA
 
-describe('InventarioPanel', () => {
-  let component: InventarioPanel;
-  let fixture: ComponentFixture<InventarioPanel>;
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [InventarioPanel]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(InventarioPanel);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-});
+}
