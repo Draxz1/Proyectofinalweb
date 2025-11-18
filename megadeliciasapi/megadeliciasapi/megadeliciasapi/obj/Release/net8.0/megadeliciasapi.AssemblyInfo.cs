@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("megadeliciasapi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+03ced43f920a273b67702d9bb35671923b597f00")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4f3a3f05510a5e01e8927a259263293fc40c2bea")]
 [assembly: System.Reflection.AssemblyProductAttribute("megadeliciasapi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("megadeliciasapi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

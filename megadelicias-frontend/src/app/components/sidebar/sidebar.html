@@ -1,0 +1,32 @@
+<aside class="w-64 bg-gray-800 text-white p-4 h-screen">
+  <h2 class="text-xl font-bold mb-4">MegaDelicias</h2>
+
+  <nav class="flex flex-col space-y-2">
+
+    <!--
+      routerLink="ruta" es el reemplazo de <NavLink to="...">
+      routerLinkActive="clase-css" le da el estilo al enlace activo.
+    -->
+
+    <a routerLink="/dashboard"
+       routerLinkActive="bg-gray-700"
+       class="p-2 rounded hover:bg-gray-700">
+      Dashboard
+    </a>
+
+    <a routerLink="/caja"
+       routerLinkActive="bg-gray-700"
+       class="p-2 rounded hover:bg-gray-700">
+      Caja
+    </a>
+
+    <a routerLink="/mesero"
+       routerLinkActive="bg-gray-700"
+       class="p-2 rounded hover:bg-gray-700">
+      Mesero
+    </a>
+
+    <!-- (Aquí puedes agregar el resto de enlaces que faltan) -->
+
+  </nav>
+</aside>

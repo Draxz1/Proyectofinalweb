@@ -1,22 +1,49 @@
-using megadeliciasapi.Data; // <--- BIEN
+using megadeliciasapi.Data;
 using megadeliciasapi.Models;
-using Microsoft.EntityFrameworkCore; // <--- BIEN
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- CONEXIÓN A BD (ESTO ESTÁ BIEN HECHO) ---
+// --- 1. DEFINE UNA VARIABLE PARA EL NOMBRE DE LA POLÍTICA ---
+var MyCorsPolicy = "_myCorsPolicy";
+
+// --- 2. AGREGA EL SERVICIO DE CORS ---
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyCorsPolicy,
+                      policy =>
+                      {
+                          // Permite que tu app de Angular (en localhost:4200) se conecte
+                          policy.WithOrigins("http://localhost:4200")
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
+                      });
+});
+
+// --- (Aquí va tu código existente de AddDbContext, AddAuthentication, etc.) ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// --- SERVICIOS DE API ---
-builder.Services.AddControllers(); // <-- ¡SOLO AddControllers(), NO AddControllersWithViews()!
-builder.Services.AddEndpointsApiExplorer(); // (Para Swagger)
-builder.Services.AddSwaggerGen(); // (Para Swagger)
+builder.Services.AddAuthentication(options =>
+{
+    //... (tu código de autenticación)
+}).AddJwtBearer(options =>
+{
+    //... (tu código de JwtBearer)
+});
+
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
-// --- PIPELINE DE API ---
-// Configura Swagger (la UI para probar tu API)
+// --- (Aquí va tu código de Swagger) ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -25,10 +52,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// (Dejamos esto listo para cuando configuremos JWT)
-app.UseAuthorization();
+// --- 3. USA LA POLÍTICA DE CORS ---
+// (¡Debe ir ANTES de UseAuthorization y MapControllers!)
+app.UseCors(MyCorsPolicy);
 
-// "MapControllers()" es para APIs (en lugar de MapControllerRoute)
-app.MapControllers();
+app.UseAuthentication(); // <-- Ya lo tienes
+app.UseAuthorization();  // <-- Ya lo tienes
+app.MapControllers();    // <-- Ya lo tienes
 
 app.Run();
