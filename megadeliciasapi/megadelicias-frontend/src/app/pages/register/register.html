@@ -1,59 +1,57 @@
-<div class="flex h-screen items-center justify-center bg-gray-100">
-  <form (ngSubmit)="register()" class="p-8 bg-white rounded shadow-md w-96">
-    <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
+<div class="flex h-screen">
 
-    <div *ngIf="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      {{ error }}
-    </div>
+  <div class="hidden lg:flex flex-col justify-center items-center w-1/2 bg-gray-900 text-white p-10 text-center">
+    <img src="assets/logo-megadelicias.png" alt="Logo" class="w-40 mb-8 drop-shadow-lg" />
+    <h1 class="text-3xl font-bold mb-4">Regístrate en MegaDelicias</h1>
+    <p class="text-gray-400 max-w-sm">
+      Crea una cuenta para acceder al panel de control del restaurante.
+    </p>
+  </div>
 
-    <div class="mb-4">
-      <label for="nombre" class="block mb-2 text-sm font-medium">Nombre</label>
-      <input 
-        type="text" 
-        id="nombre"
-        [(ngModel)]="nombre" 
-        name="nombre"
-        class="w-full p-2 border rounded" 
-        required
-      />
-    </div>
+  <div class="flex w-full lg:w-1/2 justify-center items-center bg-gray-100">
+    <form (ngSubmit)="register()" class="bg-white w-full max-w-md p-8 rounded-2xl shadow-xl">
 
-    <div class="mb-4">
-      <label for="correo" class="block mb-2 text-sm font-medium">Correo</label>
-      <input 
-        type="email" 
-        id="correo"
-        [(ngModel)]="correo" 
-        name="correo"
-        class="w-full p-2 border rounded" 
-        required
-      />
-    </div>
+      <h2 class="text-3xl font-bold text-center text-gray-900 mb-6">Crear Cuenta</h2>
 
-    <div class="mb-4">
-      <label for="password" class="block mb-2 text-sm font-medium">Contraseña</label>
-      <input 
-        type="password" 
-        id="password"
-        [(ngModel)]="password" 
-        name="password"
-        class="w-full p-2 border rounded" 
-        required
-      />
-    </div>
+      <div *ngIf="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+        {{ error }}
+      </div>
 
-    <div class="mb-6">
-      <label for="rol" class="block mb-2 text-sm font-medium">Rol</label>
-      <select [(ngModel)]="rol" name="rol" class="w-full p-2 border rounded">
-        <option value="mesero">Mesero</option>
-        <option value="admin">Admin</option>
-        <option value="cajero">Cajero</option>
-        <option value="cocinero">Cocinero</option>
-      </select>
-    </div>
+      <div class="mb-4">
+        <label for="nombre" class="block mb-2 text-sm font-medium text-gray-600">Nombre</label>
+        <input type="text" id="nombre" [(ngModel)]="nombre" name="nombre" class="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg" required />
+      </div>
 
-    <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
-      Registrarme
-    </button>
-  </form>
+      <div class="mb-4">
+        <label for="correo" class="block mb-2 text-sm font-medium text-gray-600">Correo</label>
+        <input type="email" id="correo" [(ngModel)]="correo" name="correo" class="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg" required />
+      </div>
+
+      <div class="mb-4">
+        <label for="password" class="block mb-2 text-sm font-medium text-gray-600">Contraseña</label>
+        <input type="password" id="password" [(ngModel)]="password" name="password" class="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg" required />
+      </div>
+
+      <div class="mb-6">
+        <label for="rol" class="block mb-2 text-sm font-medium text-gray-600">Rol</label>
+        <select [(ngModel)]="rol" name="rol" class="w-full p-3 bg-gray-100 border border-gray-300 rounded-lg">
+          <option value="mesero">Mesero</option>
+          <option value="admin">Administrador</option>
+          <option value="cajero">Cajero</option>
+          <option value="cocinero">Cocinero</option>
+        </select>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 font-semibold transition">
+        Registrarme
+      </button>
+
+      <p class="text-sm text-center text-gray-500 mt-6">
+        ¿Ya tienes cuenta? 
+        <a routerLink="/login" class="text-blue-600 hover:underline font-medium">
+          Inicia sesión
+        </a>
+      </p>
+    </form>
+  </div>
 </div>

@@ -1,10 +1,14 @@
-<div class="flex">
+<div class="flex min-h-screen">
 
   <app-sidebar></app-sidebar>
 
   <main class="flex-1 min-w-0">
 
-    <router-outlet></router-outlet>
+    <app-topbar title="Dashboard"></app-topbar>
+
+    <div class="p-6 sm:p-8">
+      <router-outlet></router-outlet>
+    </div>
 
   </main>
 

@@ -1,1 +1,35 @@
-<p>dashboard works!</p>
+<div class="p-4 sm:p-8">
+
+  <div class="mb-10 p-6 bg-white rounded-xl shadow-md border-b-4 border-blue-600">
+    <h1 class="text-3xl font-bold text-gray-900">
+      ¡Bienvenido, {{ userName | titlecase }}!
+    </h1>
+    <p class="text-gray-500 text-lg mt-1">
+      Acceso rápido a tus módulos principales. Rol: {{ userRole | titlecase }}
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+
+    <div *ngIf="options.length === 0" class="col-span-full text-center p-10 bg-white rounded-xl shadow-md">
+        <h3 class="text-xl font-semibold text-red-600">Acceso Restringido</h3>
+        <p class="text-gray-500">Tu rol no tiene módulos asignados. Contacta al administrador.</p>
+    </div>
+
+    <div *ngFor="let option of options" 
+         (click)="navigate(option.path)"
+         class="bg-white rounded-xl shadow-xl p-6 flex flex-col items-center text-center 
+                hover:shadow-2xl hover:bg-gray-50 hover:scale-[1.02] transition-all duration-200 
+                cursor-pointer border border-gray-200">
+
+      <div class="text-6xl text-blue-600 mb-4 bg-blue-50 p-4 rounded-full">
+        <lucide-icon [name]="option.icon" [class]="'w-12 h-12'"></lucide-icon>
+      </div>
+
+      <h3 class="text-xl font-semibold text-gray-800">{{ option.label }}</h3>
+      <p class="text-sm text-gray-500 mt-2">
+        Accede a la gestión de {{ option.label.toLowerCase() }}.
+      </p>
+    </div>
+  </div>
+</div>
