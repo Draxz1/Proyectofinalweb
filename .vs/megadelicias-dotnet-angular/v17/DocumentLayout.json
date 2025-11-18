@@ -3,26 +3,6 @@
   "WorkspaceRootPath": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\app.routes.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:megadelicias-frontend\\src\\app\\app.routes.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
@@ -123,67 +103,6 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "app.routes.ts",
-              "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\app.routes.ts",
-              "RelativeDocumentMoniker": "megadelicias-frontend\\src\\app\\app.routes.ts",
-              "ToolTip": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\app.routes.ts",
-              "RelativeToolTip": "megadelicias-frontend\\src\\app\\app.routes.ts",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-17T05:46:31.512Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "sidebar.ts",
-              "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.ts",
-              "RelativeDocumentMoniker": "megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.ts",
-              "ToolTip": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.ts",
-              "RelativeToolTip": "megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.ts",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-17T05:41:45.356Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "sidebar.html",
-              "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.html",
-              "RelativeDocumentMoniker": "megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.html",
-              "ToolTip": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.html",
-              "RelativeToolTip": "megadelicias-frontend\\src\\app\\components\\sidebar\\sidebar.html",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-11-17T05:41:36.052Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "app-layout.ts",
-              "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.ts",
-              "RelativeDocumentMoniker": "megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.ts",
-              "ToolTip": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.ts",
-              "RelativeToolTip": "megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.ts",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2025-11-17T05:41:18.065Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "app-layout.html",
-              "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.html",
-              "RelativeDocumentMoniker": "megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.html",
-              "ToolTip": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.html",
-              "RelativeToolTip": "megadelicias-frontend\\src\\app\\components\\app-layout\\app-layout.html",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2025-11-17T05:41:03.664Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\appsettings.json",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\appsettings.json",
@@ -191,11 +110,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-11-16T19:59:50.458Z"
+              "WhenOpened": "2025-11-16T19:59:50.458Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 1,
               "Title": "AplicacionDbContext.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Data\\AplicacionDbContext.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Data\\AplicacionDbContext.cs",
@@ -203,11 +123,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Data\\AplicacionDbContext.cs",
               "ViewState": "AgIAAA8AAAAAAAAAAAAAACYAAAAlAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:27:38.555Z"
+              "WhenOpened": "2025-11-16T19:27:38.555Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 2,
               "Title": "ApplicationDbContextModelSnapshot.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Migrations\\ApplicationDbContextModelSnapshot.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Migrations\\ApplicationDbContextModelSnapshot.cs",
@@ -215,11 +136,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Migrations\\ApplicationDbContextModelSnapshot.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:27:35.163Z"
+              "WhenOpened": "2025-11-16T19:27:35.163Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 3,
               "Title": "CierreCaja.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\CierreCaja.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\CierreCaja.cs",
@@ -227,11 +149,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\CierreCaja.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACMAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:27:10.546Z"
+              "WhenOpened": "2025-11-16T19:27:10.546Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 5,
               "Title": "InventarioMovimiento.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\InventarioMovimiento.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\InventarioMovimiento.cs",
@@ -239,11 +162,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\InventarioMovimiento.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:26:37.586Z"
+              "WhenOpened": "2025-11-16T19:26:37.586Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 6,
               "Title": "PlatoIngrediente.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\PlatoIngrediente.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\PlatoIngrediente.cs",
@@ -251,11 +175,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\PlatoIngrediente.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:26:21.199Z"
+              "WhenOpened": "2025-11-16T19:26:21.199Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 7,
               "Title": "InventarioItem.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\InventarioItem.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\InventarioItem.cs",
@@ -263,11 +188,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\InventarioItem.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:25:49.498Z"
+              "WhenOpened": "2025-11-16T19:25:49.498Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 8,
               "Title": "Factura.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Factura.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Factura.cs",
@@ -275,11 +201,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Factura.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:25:15.784Z"
+              "WhenOpened": "2025-11-16T19:25:15.784Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 9,
               "Title": "Pago.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Pago.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Pago.cs",
@@ -287,11 +214,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Pago.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:25:00.41Z"
+              "WhenOpened": "2025-11-16T19:25:00.41Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 11,
               "Title": "DetalleOrden.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\DetalleOrden.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\DetalleOrden.cs",
@@ -299,11 +227,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\DetalleOrden.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:24:18.554Z"
+              "WhenOpened": "2025-11-16T19:24:18.554Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 12,
               "Title": "Orden.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Orden.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Orden.cs",
@@ -311,11 +240,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Orden.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:23:49.443Z"
+              "WhenOpened": "2025-11-16T19:23:49.443Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 14,
               "Title": "Categoria.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Categoria.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Categoria.cs",
@@ -323,11 +253,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Categoria.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:23:23.593Z"
+              "WhenOpened": "2025-11-16T19:23:23.593Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 15,
               "Title": "Mesa.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Mesa.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Mesa.cs",
@@ -335,11 +266,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Mesa.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:23:12.583Z"
+              "WhenOpened": "2025-11-16T19:23:12.583Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 16,
               "Title": "EstadoOrden.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\EstadoOrden.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\EstadoOrden.cs",
@@ -347,11 +279,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\EstadoOrden.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:22:39.169Z"
+              "WhenOpened": "2025-11-16T19:22:39.169Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 4,
               "Title": "MovimientoCaja.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\MovimientoCaja.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\MovimientoCaja.cs",
@@ -359,11 +292,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\MovimientoCaja.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:16:15.618Z"
+              "WhenOpened": "2025-11-16T19:16:15.618Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 17,
               "Title": "MetodoDePago.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\MetodoDePago.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\MetodoDePago.cs",
@@ -371,11 +305,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\MetodoDePago.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:22:17.297Z"
+              "WhenOpened": "2025-11-16T19:22:17.297Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 18,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Program.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Program.cs",
@@ -383,11 +318,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAABWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:20:43.372Z"
+              "WhenOpened": "2025-11-16T19:20:43.372Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 19,
               "Title": "Usuario.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Usuario.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Usuario.cs",
@@ -395,11 +331,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Usuario.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:20:19.831Z"
+              "WhenOpened": "2025-11-16T19:20:19.831Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 10,
               "Title": "Venta.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Venta.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Venta.cs",
@@ -407,11 +344,12 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Venta.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:05:26.439Z"
+              "WhenOpened": "2025-11-16T19:05:26.439Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 13,
               "Title": "Plato.cs",
               "DocumentMoniker": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Plato.cs",
               "RelativeDocumentMoniker": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Plato.cs",
@@ -419,7 +357,8 @@
               "RelativeToolTip": "megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\Models\\Plato.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-16T19:00:40.062Z"
+              "WhenOpened": "2025-11-16T19:00:40.062Z",
+              "EditorCaption": ""
             }
           ]
         }
