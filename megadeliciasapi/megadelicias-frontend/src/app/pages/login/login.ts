@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http'; // <-- Para llamar a la API
 import { Router, RouterLink } from '@angular/router'; // <-- RouterLink para el enlace
-import { AuthService } from '../../services/auth'; // <-- El servicio de Diego
+import { AuthService} from '../../services/auth'; // <-- El servicio de Diego
 
 // Importaciones necesarias para Standalone + Forms
 import { CommonModule } from '@angular/common';
@@ -11,8 +11,8 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink], // <-- ¡Añadir CommonModule, FormsModule y RouterLink!
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.css'
+  templateUrl: './login.html',
+  styleUrl: './login.css'
 })
 export class LoginComponent {
   // --- Variables para el formulario ---
