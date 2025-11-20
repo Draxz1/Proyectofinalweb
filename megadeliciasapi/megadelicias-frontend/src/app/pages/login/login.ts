@@ -24,7 +24,7 @@ export class LoginComponent { // <-- FIX 2: La clase debe ser EXPORTADA
   router = inject(Router);
   authService = inject(AuthService); 
 
-  private apiUrl = 'https://localhost:7110/api/Auth/login'; // (Revisa tu puerto)
+  private apiUrl = 'http://localhost:5143/api/Auth/login'; // (Revisa tu puerto)
 
   login() {
     this.error = ''; 

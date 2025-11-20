@@ -28,7 +28,7 @@ export class RegisterComponent {
 
   // --- URL del Backend de Axel ---
   // (Asegúrate de que el puerto 7110 sea el de tu API)
-  private apiUrl = 'https://localhost:7110/api/Auth/register'; 
+  private apiUrl = 'http://localhost:5143/api/Auth/register'; 
 
   register() {
     this.error = ''; // Limpia errores anteriores
