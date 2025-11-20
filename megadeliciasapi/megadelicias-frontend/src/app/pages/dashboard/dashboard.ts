@@ -2,13 +2,13 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
 
-// Importaciones de Lucide y el Servicio
+
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../services/auth'; 
 
 interface DashboardOption {
   label: string;
-  icon: string; // Nombre del icono en Lucide
+  icon: string; 
   path: string;
   show: boolean; 
 }
@@ -32,10 +32,10 @@ export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  options: DashboardOption[] = []; // Esto contendrá las tarjetas
+  options: DashboardOption[] = []; 
 
   ngOnInit() {
-    // Lógica para obtener el nombre y rol del usuario logueado
+    
     const user = this.authService.getUserData();
     if (user) {
       this.userName = user.nombre;
@@ -46,11 +46,11 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  // Lógica migrada del antiguo Dashboard.jsx para mostrar tarjetas por rol
+ 
   getOptions(role: string): DashboardOption[] {
     const can = (roles: string[]) => role === 'admin' || roles.includes(role);
 
-    // Mapeo de opciones (usamos nombres de Lucide como string)
+    
     const items: DashboardOption[] = [
       { label: 'Administrador', icon: 'users', path: '/admin', show: can(['admin']) },
       { label: 'Caja POS', icon: 'calculator', path: '/caja', show: can(['admin', 'cajero', 'mesero']) },
