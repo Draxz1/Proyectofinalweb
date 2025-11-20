@@ -1,11 +1,11 @@
-import { Injectable, inject } from '@angular/core'; // Agregamos inject por si acaso
+import { Injectable, inject } from '@angular/core'; 
 import { Router } from '@angular/router';
 import { jwtDecode } from 'jwt-decode'; 
 
 @Injectable({
   providedIn: 'root'
 })
-export class AuthService { // <--- ¡ASEGÚRATE QUE DIGA "export class"!
+export class AuthService { 
 
   constructor(private router: Router) { }
 
@@ -44,7 +44,7 @@ export class AuthService { // <--- ¡ASEGÚRATE QUE DIGA "export class"!
     if (!token) return false;
     try {
       const decoded: any = jwtDecode(token);
-      // Verifica si expiró
+      
       if (decoded.exp * 1000 < Date.now()) {
         this.logout();
         return false;

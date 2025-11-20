@@ -1,15 +1,15 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router'; // <-- Lo necesitamos para el menú
+import { RouterLink } from '@angular/router'; 
 
 @Component({
   selector: 'app-contabilidad',
   standalone: true,
-  imports: [CommonModule, RouterLink], // <-- Agregamos RouterLink
-  // CORRECCIÓN: Quitamos ".component"
+  imports: [CommonModule, RouterLink], 
+  
   templateUrl: './contabilidad.html', 
   styleUrl: './contabilidad.css'
 })
-export class ContabilidadComponent { // <-- CLAVE: La clase debe ser EXPORTADA
+export class ContabilidadComponent { 
 
 }

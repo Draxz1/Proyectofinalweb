@@ -10,11 +10,11 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
-  // 🚨 FIX 1: template y style deben ser './login.html' y './login.css'
+  
   templateUrl: './login.html', 
   styleUrl: './login.css'
 })
-export class LoginComponent { // <-- FIX 2: La clase debe ser EXPORTADA
+export class LoginComponent { 
   
   correo: string = '';
   password: string = '';
@@ -24,7 +24,7 @@ export class LoginComponent { // <-- FIX 2: La clase debe ser EXPORTADA
   router = inject(Router);
   authService = inject(AuthService); 
 
-  private apiUrl = 'https://localhost:7110/api/Auth/login'; // (Revisa tu puerto)
+  private apiUrl = 'http://localhost:5143/api/Auth/login'; 
 
   login() {
     this.error = ''; 

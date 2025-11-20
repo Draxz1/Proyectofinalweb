@@ -1,14 +1,14 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common'; // <-- Importar CommonModule
+import { CommonModule } from '@angular/common'; 
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule], // <-- Añadir CommonModule
-  // CORRECCIÓN: Los nombres de archivo no llevan .component
+  imports: [CommonModule], 
+  
   templateUrl: './admin-users.html', 
   styleUrl: './admin-users.css'
 })
-export class AdminUsersComponent { // <-- CLAVE: La clase debe ser EXPORTADA
+export class AdminUsersComponent { 
 
 }

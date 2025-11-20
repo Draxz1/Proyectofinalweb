@@ -1,13 +1,13 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common'; // <-- Importa CommonModule
+import { CommonModule } from '@angular/common'; 
 
 @Component({
   selector: 'app-cocina-panel',
   standalone: true,
-  imports: [CommonModule], // <-- Añade CommonModule
-  templateUrl: './cocina-panel.html', // <-- Asegúrate que sea .html
-  styleUrl: './cocina-panel.css'      // <-- Asegúrate que sea .css
+  imports: [CommonModule], 
+  templateUrl: './cocina-panel.html', 
+  styleUrl: './cocina-panel.css'      
 })
 export class CocinaPanelComponent {
-  // ¡Ahora la clase "CocinaPanelComponent" existe y se exporta!
+  
 }

@@ -1,13 +1,13 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common'; // Importa CommonModule
+import { CommonModule } from '@angular/common'; 
 
 @Component({
   selector: 'app-mesero-panel',
   standalone: true,
-  imports: [CommonModule], // Añade CommonModule
-  templateUrl: './mesero-panel.html', // Asegúrate que el nombre coincida
-  styleUrl: './mesero-panel.css' // Asegúrate que el nombre coincida
+  imports: [CommonModule], 
+  templateUrl: './mesero-panel.html', 
+  styleUrl: './mesero-panel.css' 
 })
 export class MeseroPanelComponent {
-  // ¡Ahora la clase "MeseroPanelComponent" existe y se exporta!
+  
 }

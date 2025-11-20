@@ -8,6 +8,5 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.html', 
   styleUrl: './app.css'
 })
-export class AppComponent { // <-- FIX: Se llama AppComponent y está exportado
-  // La clase App ahora se llama AppComponent (convención estándar)
+export class AppComponent { 
 }

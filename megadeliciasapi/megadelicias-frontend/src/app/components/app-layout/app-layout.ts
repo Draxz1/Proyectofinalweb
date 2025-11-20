@@ -1,15 +1,15 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router'; // <-- ¡Importa RouterOutlet!
-import { SidebarComponent } from '../sidebar/sidebar'; // <-- ¡Importa el Sidebar!
+import { RouterOutlet } from '@angular/router'; 
+import { SidebarComponent } from '../sidebar/sidebar'; 
 import { TopbarComponent } from '../topbar/topbar';
 
 @Component({
   selector: 'app-app-layout',
   standalone: true,
   imports: [
-    RouterOutlet,       // <-- ¡Añádelo aquí!
+    RouterOutlet,       
     SidebarComponent,
-    TopbarComponent    // <-- ¡Añádelo aquí!
+    TopbarComponent    
   ],
   templateUrl: './app-layout.html',
   styleUrl: './app-layout.css'
