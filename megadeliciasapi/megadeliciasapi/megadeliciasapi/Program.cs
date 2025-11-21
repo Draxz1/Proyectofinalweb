@@ -1,41 +1,59 @@
 using megadeliciasapi.Data;
 using megadeliciasapi.Models;
+using megadeliciasapi.Services; // <-- FIX 1: Agregamos el namespace de los Servicios
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-
+using megadeliciasapi.Services;
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. DEFINE UNA VARIABLE PARA EL NOMBRE DE LA POLÕTICA ---
+// --- 1. CONFIGURACI√ìN DE CORS ---
 var MyCorsPolicy = "_myCorsPolicy";
-
-// --- 2. AGREGA EL SERVICIO DE CORS ---
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyCorsPolicy,
                       policy =>
                       {
-                          // Permite que tu app de Angular (en localhost:4200) se conecte
                           policy.WithOrigins("http://localhost:4200")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod();
                       });
 });
 
-// --- (AquÌ va tu cÛdigo existente de AddDbContext, AddAuthentication, etc.) ---
+// --- 2. CONEXI√ìN A BASE DE DATOS ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+// --- 3. REGISTRAR SERVICIO DE EMAIL ---
+// Ahora funcionar√° porque agregamos el 'using megadeliciasapi.Services' arriba
+builder.Services.AddScoped<IEmailService, EmailService>(); 
+
+// --- 4. CONFIGURACI√ìN DE JWT (AUTENTICACI√ìN) ---
 builder.Services.AddAuthentication(options =>
 {
-    //... (tu cÛdigo de autenticaciÛn)
-}).AddJwtBearer(options =>
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
 {
-    //... (tu cÛdigo de JwtBearer)
+    // FIX 2: Validaci√≥n de seguridad para evitar el Warning CS8604
+    var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key no est√° configurada en appsettings");
+
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
 });
 
+// --- 5. SERVICIOS B√ÅSICOS DE API ---
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -43,7 +61,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// --- (AquÌ va tu cÛdigo de Swagger) ---
+// --- 6. PIPELINE DE EJECUCI√ìN ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -52,12 +70,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// --- 3. USA LA POLÕTICA DE CORS ---
-// (°Debe ir ANTES de UseAuthorization y MapControllers!)
 app.UseCors(MyCorsPolicy);
 
-app.UseAuthentication(); // <-- Ya lo tienes
-app.UseAuthorization();  // <-- Ya lo tienes
-app.MapControllers();    // <-- Ya lo tienes
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "v9urr45O2nA=",
+  "dgSpecHash": "hB/A5tlGLlE=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi.csproj",
+  "projectFilePath": "C:\\Users\\Pc\\Desktop\\proyectodeasrollowebFD\\Proyectofinalweb\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Pc\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
     "C:\\Users\\Pc\\.nuget\\packages\\azure.identity\\1.7.0\\azure.identity.1.7.0.nupkg.sha512",
@@ -92,10 +92,10 @@
     {
       "code": "NU1902",
       "level": "Warning",
-      "message": "El paquete \"System.IdentityModel.Tokens.Jwt\" 7.0.3 tiene una vulnerabilidad de gravedad moderada conocida, https://github.com/advisories/GHSA-59j7-ghrg-fj52",
-      "projectPath": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi.csproj",
+      "message": "Package 'System.IdentityModel.Tokens.Jwt' 7.0.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-59j7-ghrg-fj52",
+      "projectPath": "C:\\Users\\Pc\\Desktop\\proyectodeasrollowebFD\\Proyectofinalweb\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\Pc\\Desktop\\megadelicias-dotnet-angular\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi.csproj",
+      "filePath": "C:\\Users\\Pc\\Desktop\\proyectodeasrollowebFD\\Proyectofinalweb\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi\\megadeliciasapi.csproj",
       "libraryId": "System.IdentityModel.Tokens.Jwt",
       "targetGraphs": [
         "net8.0"
