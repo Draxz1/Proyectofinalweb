@@ -1,38 +1,114 @@
-﻿using megadeliciasapi.Data; // <-- Importa el DbContext
-using megadeliciasapi.Models; // <-- Importa el modelo 'Plato'
-using Microsoft.AspNetCore.Authorization; // <-- Para proteger el endpoint
+﻿using megadeliciasapi.Data;
+using megadeliciasapi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore; // <-- Para usar .ToListAsync()
+using Microsoft.EntityFrameworkCore;
 
 namespace megadeliciasapi.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]")] // La ruta será /api/Plato
     [ApiController]
-    [Authorize] // <-- ¡Protege todo el controlador! Nadie sin token puede ver esto.
-    public class PlatosController : ControllerBase
+    [Authorize] // Requiere estar logueado para ver el menú
+    public class PlatoController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        // 1. Inyecta la base de datos (DbContext)
-        public PlatosController(ApplicationDbContext context)
+        public PlatoController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // 2. Crea el método GET para obtener todos los platos
-        // Esta función se activará con: GET /api/Platos
+        // 1. READ ALL (Obtener todo el menú)
+        // GET: api/Plato
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Plato>>> GetPlatos()
         {
-            // 3. Lee la tabla 'Platos' de la BD y la convierte en una lista
-            var platos = await _context.Platos
-                                .OrderBy(p => p.Nombre) // Opcional: ordenarlos
-                                .ToListAsync();
-
-            // 4. Devuelve los platos como JSON con un código 200 OK
-            return Ok(platos);
+            return await _context.Platos
+                                 .OrderBy(p => p.Categoria) // Ordenamos por categoría para que se vea mejor
+                                 .ThenBy(p => p.Nombre)
+                                 .ToListAsync();
         }
 
-        // (Aquí pondremos los métodos POST, PUT, DELETE más adelante en el proyecto)
+        // 2. READ BY ID (Obtener un plato específico)
+        // GET: api/Plato/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Plato>> GetPlato(int id)
+        {
+            var plato = await _context.Platos.FindAsync(id);
+
+            if (plato == null)
+            {
+                return NotFound();
+            }
+
+            return plato;
+        }
+
+        // 3. CREATE (Crear plato - Solo Admin)
+        // POST: api/Plato
+        [HttpPost]
+        [Authorize(Roles = "admin")] 
+        public async Task<ActionResult<Plato>> PostPlato(Plato plato)
+        {
+            if (plato == null) return BadRequest();
+
+            plato.Id = 0; // Aseguramos que se cree uno nuevo
+            plato.CreadoEn = DateTime.Now;
+            
+            _context.Platos.Add(plato);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetPlato), new { id = plato.Id }, plato);
+        }
+
+        // 4. UPDATE (Editar plato - Solo Admin)
+        // PUT: api/Plato/5
+        [HttpPut("{id}")]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> PutPlato(int id, Plato plato)
+        {
+            if (id != plato.Id)
+            {
+                return BadRequest("El ID de la URL no coincide con el del cuerpo.");
+            }
+
+            _context.Entry(plato).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Platos.Any(e => e.Id == id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        // 5. DELETE (Borrar plato - Solo Admin)
+        // DELETE: api/Plato/5
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> DeletePlato(int id)
+        {
+            var plato = await _context.Platos.FindAsync(id);
+            if (plato == null)
+            {
+                return NotFound();
+            }
+
+            _context.Platos.Remove(plato);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
 }
