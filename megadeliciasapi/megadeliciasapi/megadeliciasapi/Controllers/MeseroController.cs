@@ -79,7 +79,7 @@ namespace megadeliciasapi.Controllers
             int estadoId = estadoPendiente?.Id ?? 1; // Fallback a 1 si no encuentra
 
             // --- FIX: OBTENER MESA AUTOMÁTICAMENTE (Evita error 500) ---
-            // Si el frontend manda mesa, la usamos; si no, tomamos la primera disponible
+            // agrue este medodo para que el frontend manda mesa, la usamos; si no, tomamos la primera disponible
             int mesaIdReal;
             if (dto.MesaId.HasValue && dto.MesaId > 0)
             {
@@ -120,7 +120,7 @@ namespace megadeliciasapi.Controllers
                 Fecha = DateTime.Now,
                 EstadoId = estadoId,
                 TipoOrden = "LOCAL",
-                MesaId = mesaIdReal, // <--- FIX: Usamos un ID válido
+                MesaId = mesaIdReal, // <--- FIX: Usamos un Id válido
                 TotalOrden = total,
                 Detalles = nuevosDetalles
             };
