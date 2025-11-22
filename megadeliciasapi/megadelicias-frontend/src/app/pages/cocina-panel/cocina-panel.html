@@ -1,97 +1,133 @@
-<div class="p-6 min-h-screen bg-gray-50">
+<div class="p-6 min-h-screen bg-gray-100 font-sans">
   
-  <div class="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-3">
+      <h1 class="text-3xl font-extrabold text-gray-800 flex items-center gap-3 tracking-tight">
         <lucide-icon name="chef-hat" class="w-8 h-8 text-orange-600"></lucide-icon> 
         Monitor de Cocina
       </h1>
-      <p class="text-gray-500 text-sm mt-1">Gestiona la preparación de alimentos en tiempo real.</p>
+      <p class="text-gray-500 text-sm mt-1 ml-11">Control de comandas en tiempo real</p>
     </div>
     
     <div class="flex items-center gap-4">
-      <span class="text-sm font-medium text-gray-500 flex items-center gap-2">
-        <span class="relative flex h-3 w-3">
+      <div class="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wider">
+        <span class="relative flex h-2 w-2">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
         </span>
         En vivo
-      </span>
-      <button (click)="fetchOrdenes()" class="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 shadow-sm transition active:scale-95">
-        <lucide-icon name="refresh-cw" class="w-4 h-4" [class.animate-spin]="loading"></lucide-icon>
-        Actualizar
+      </div>
+      <button (click)="fetchOrdenes()" class="p-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition shadow-sm active:scale-95" title="Actualizar lista">
+        <lucide-icon name="refresh-cw" class="w-5 h-5" [class.animate-spin]="loading"></lucide-icon>
       </button>
     </div>
   </div>
 
+  <div class="flex flex-wrap gap-2 mb-8 bg-white p-2 rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+    <button (click)="setFiltro('Todos')" 
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap"
+            [ngClass]="filtroActual === 'Todos' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'">
+      <lucide-icon name="utensils" class="w-4 h-4"></lucide-icon>
+      Todos
+      <span class="ml-1 bg-white/20 px-1.5 rounded text-xs">{{ contarOrdenes('Todos') }}</span>
+    </button>
+    
+    <div class="w-px h-6 bg-gray-200 mx-1 self-center"></div>
+
+    <button (click)="setFiltro('PENDIENTE')" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2" [ngClass]="filtroActual === 'PENDIENTE' ? 'bg-yellow-500 text-white shadow-md' : 'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600'">
+      Pendientes <span class="ml-1 px-1.5 rounded text-xs bg-white/20">{{ contarOrdenes('PENDIENTE') }}</span>
+    </button>
+
+    <button (click)="setFiltro('EN_PROCESO')" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2" [ngClass]="filtroActual === 'EN_PROCESO' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'">
+      En Proceso <span class="ml-1 px-1.5 rounded text-xs bg-white/20">{{ contarOrdenes('EN_PROCESO') }}</span>
+    </button>
+
+    <button (click)="setFiltro('LISTO')" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2" [ngClass]="filtroActual === 'LISTO' ? 'bg-green-600 text-white shadow-md' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'">
+      Listo <span class="ml-1 px-1.5 rounded text-xs bg-white/20">{{ contarOrdenes('LISTO') }}</span>
+    </button>
+
+    <div class="w-px h-6 bg-gray-200 mx-1 self-center"></div>
+
+    <button (click)="setFiltro('ENTREGADO')" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2" [ngClass]="filtroActual === 'ENTREGADO' ? 'bg-gray-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'">
+      Entregados
+    </button>
+     <button (click)="setFiltro('CANCELADO')" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2" [ngClass]="filtroActual === 'CANCELADO' ? 'bg-red-600 text-white shadow-md' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'">
+      Cancelados
+    </button>
+  </div>
+
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
     
-    <div *ngFor="let orden of ordenes" 
-         class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col transition-all hover:shadow-lg border border-gray-100"
+    <div *ngFor="let orden of ordenesFiltradas; trackBy: trackByOrden" 
+         class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-200 flex flex-col overflow-hidden"
          [ngClass]="getColorEstado(orden.estado)">
       
-      <div class="px-4 py-3 border-b flex justify-between items-start bg-white/50">
+      <div class="px-5 py-4 border-b border-gray-100 bg-white/60 backdrop-blur-sm flex justify-between items-start">
         <div>
-          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-             Orden #{{ orden.id }}
-          </h2>
-          <div class="text-xs text-gray-500 flex items-center gap-1 mt-1">
-            <lucide-icon name="clock" class="w-3 h-3"></lucide-icon>
+          <h2 class="text-xl font-extrabold text-gray-800 tracking-tight">#{{ orden.id }}</h2>
+          <div class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
+            <lucide-icon name="clock" class="w-3.5 h-3.5"></lucide-icon>
             {{ orden.fecha | date:'h:mm a' }}
+            <span class="text-gray-300">|</span> {{ orden.mesero }}
           </div>
         </div>
-        <span class="px-2 py-1 rounded-lg text-xs font-bold uppercase tracking-wide border"
+        <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border shadow-sm"
               [ngClass]="getBadgeColor(orden.estado)">
-          {{ orden.estado }}
+          {{ orden.estado || 'SIN ESTADO' }}
         </span>
       </div>
 
-      <div class="p-4 flex-1">
-        <ul class="space-y-4">
-          <li *ngFor="let item of orden.items" class="text-sm">
-            <div class="flex gap-3">
-              <span class="font-bold text-xl text-gray-700 w-8 text-center bg-gray-100 rounded h-8 flex items-center justify-center">{{ item.cantidad }}</span>
-              <div class="flex-1">
-                <div class="font-medium text-gray-900 leading-snug pt-1">{{ item.nombre }}</div>
-                <div *ngIf="item.nota" class="mt-2 text-xs text-orange-700 bg-orange-50 px-2 py-1.5 rounded border border-orange-200 inline-flex items-center gap-1 w-full">
-                  <span>📝</span> <span class="italic">{{ item.nota }}</span>
-                </div>
+      <div class="p-5 flex-1 bg-white/40">
+        <div *ngIf="!orden.items || orden.items.length === 0" class="text-center text-gray-400 text-sm italic py-2">
+          Sin detalles registrados
+        </div>
+
+        <ul class="space-y-3" *ngIf="orden.items && orden.items.length > 0">
+          <li *ngFor="let item of orden.items" class="flex gap-3 items-start group">
+            <span class="flex-shrink-0 font-bold text-lg text-gray-700 w-8 h-8 bg-white border border-gray-200 rounded-lg flex items-center justify-center shadow-sm">
+              {{ item.cantidad }}
+            </span>
+            <div class="flex-1 pt-0.5">
+              <div class="font-semibold text-gray-800 leading-tight">{{ item.nombre }}</div>
+              <div *ngIf="item.nota" class="mt-1.5 text-xs text-orange-800 bg-orange-50 px-2 py-1 rounded border border-orange-100 inline-block">
+                Nota: {{ item.nota }}
               </div>
             </div>
           </li>
         </ul>
       </div>
 
-      <div class="p-3 bg-gray-50 border-t grid gap-2">
+      <div class="p-4 bg-white border-t border-gray-100 grid gap-3" *ngIf="orden.estado !== 'ENTREGADO' && orden.estado !== 'CANCELADO'">
         
-        <button *ngIf="orden.estado === 'PENDIENTE'" 
-                (click)="cambiarEstado(orden.id, 'EN_PROCESO')"
-                class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95">
-          <lucide-icon name="flame" class="w-4 h-4"></lucide-icon>
-          Empezar a Cocinar
+        <button *ngIf="orden.estado === 'PENDIENTE'" (click)="cambiarEstado(orden.id, 'EN_PROCESO')"
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95">
+          <lucide-icon name="flame" class="w-4 h-4"></lucide-icon> Cocinar
+        </button>
+        
+        <button *ngIf="orden.estado === 'PENDIENTE'" (click)="cambiarEstado(orden.id, 'CANCELADO')"
+                   class="w-full py-2 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded-lg text-xs font-medium active:scale-95">
+             Cancelar
         </button>
 
-        <button *ngIf="orden.estado === 'EN_PROCESO'" 
-                (click)="cambiarEstado(orden.id, 'LISTO')"
-                class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95">
-          <lucide-icon name="check-circle" class="w-4 h-4"></lucide-icon>
-          Marcar como Listo
+        <button *ngIf="orden.estado === 'EN_PROCESO'" (click)="cambiarEstado(orden.id, 'LISTO')"
+                class="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95">
+          <lucide-icon name="check-circle" class="w-4 h-4"></lucide-icon> Marcar Listo
         </button>
 
-        <div *ngIf="orden.estado === 'LISTO'" class="text-center py-2 text-green-700 text-sm font-bold flex items-center justify-center gap-2 bg-green-100/50 rounded-lg border border-green-200">
-          <lucide-icon name="bell" class="w-4 h-4"></lucide-icon>
-          Esperando mesero
+        <div *ngIf="orden.estado === 'LISTO'" class="text-center py-2 text-green-700 text-sm font-bold bg-green-50 rounded border border-green-200 animate-pulse">
+           ¡Listo para recoger!
         </div>
-
+        <button *ngIf="orden.estado === 'LISTO'" (click)="cambiarEstado(orden.id, 'ENTREGADO')"
+                class="w-full py-2 bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 rounded text-xs font-medium active:scale-95">
+          Entregar
+        </button>
       </div>
+
     </div>
 
-    <div *ngIf="ordenes.length === 0" class="col-span-full flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-300">
-      <div class="bg-gray-50 p-6 rounded-full mb-4">
-        <lucide-icon name="coffee" class="w-12 h-12 text-gray-300"></lucide-icon>
-      </div>
-      <h3 class="text-lg font-medium text-gray-900">Sin órdenes pendientes</h3>
-      <p class="text-gray-500">La cocina está tranquila por ahora.</p>
+    <div *ngIf="ordenesFiltradas.length === 0" class="col-span-full py-20 text-center text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
+      <div class="mb-2"><lucide-icon name="coffee" class="w-10 h-10 mx-auto text-gray-300"></lucide-icon></div>
+      <p>No hay órdenes en {{ filtroActual }}</p>
     </div>
 
   </div>
