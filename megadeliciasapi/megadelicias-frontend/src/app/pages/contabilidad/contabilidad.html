@@ -1,14 +1,87 @@
-<div class="p-4">
-  <h1 class="text-3xl font-bold text-gray-800 mb-6">Módulos de Contabilidad</h1>
-  <p class="text-gray-600 mb-6">
-    Aquí estarán los módulos de Balance General, Libro Diario, etc.
-    (El frontend ya tiene el código antiguo de React para este módulo que podemos migrar más tarde).
-  </p>
-  
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    <a routerLink="/libro-diario" class="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-      <h2 class="text-xl font-semibold text-blue-600">Libro Diario</h2>
-      <p class="text-sm text-gray-500 mt-1">Registro de transacciones.</p>
-    </a>
+<div class="contabilidad-page">
+
+  <h1 class="titulo">Módulo de Contabilidad</h1>
+
+  <!-- Botón para recargar el resumen -->
+  <button (click)="cargarResumenDiario()" class="btn btn-primario">
+    Actualizar resumen diario
+  </button>
+
+  <!-- Mensajes de estado -->
+  <div *ngIf="cargandoResumen || cargandoCierre" class="msg info">
+    Procesando, por favor espere...
+  </div>
+
+  <div *ngIf="error" class="msg error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="mensajeOk" class="msg exito">
+    {{ mensajeOk }}
+  </div>
+
+  <!-- Resumen contable -->
+  <div *ngIf="resumen" class="resumen-grid">
+    <div class="card">
+      <h2>Rango de fechas</h2>
+      <p><strong>Desde:</strong> {{ resumen.fechaInicio }}</p>
+      <p><strong>Hasta:</strong> {{ resumen.fechaFin }}</p>
+      <p class="comentario">{{ resumen.comentario }}</p>
+    </div>
+
+    <div class="card">
+      <h2>Total Ventas</h2>
+      <p class="monto">L. {{ resumen.totalVentas | number:'1.2-2' }}</p>
+    </div>
+
+    <div class="card">
+      <h2>Total Facturado</h2>
+      <p class="monto">L. {{ resumen.totalFacturado | number:'1.2-2' }}</p>
+    </div>
+
+    <div class="card">
+      <h2>Total Impuesto</h2>
+      <p class="monto">L. {{ resumen.totalImpuesto | number:'1.2-2' }}</p>
+    </div>
+  </div>
+
+  <!-- Formulario de cierre contable -->
+  <div class="card cierre-form">
+    <h2>Registrar cierre contable</h2>
+
+    <form (ngSubmit)="registrarCierre()" #formCierre="ngForm">
+      <div class="form-group">
+        <label for="fechaCierre">Fecha de cierre</label>
+        <input
+          type="date"
+          id="fechaCierre"
+          name="fechaCierre"
+          [(ngModel)]="cierreFecha"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="observaciones">Observaciones</label>
+        <textarea
+          id="observaciones"
+          name="observaciones"
+          rows="3"
+          [(ngModel)]="cierreObservaciones"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-secundario" [disabled]="cargandoCierre">
+        Registrar cierre
+      </button>
+    </form>
+
+    <div *ngIf="cierreRespuesta" class="resultado-cierre">
+      <h3>Resultado del cierre</h3>
+      <p><strong>Fecha:</strong> {{ cierreRespuesta.fechaCierre }}</p>
+      <p><strong>Usuario:</strong> {{ cierreRespuesta.usuario }}</p>
+      <p><strong>Total ventas cerradas:</strong> L. {{ cierreRespuesta.totalVentasCerradas | number:'1.2-2' }}</p>
+      <p><strong>Mensaje:</strong> {{ cierreRespuesta.mensaje }}</p>
+    </div>
   </div>
 </div>
