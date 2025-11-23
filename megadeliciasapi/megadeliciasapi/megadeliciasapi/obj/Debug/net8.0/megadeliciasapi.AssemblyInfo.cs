@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("megadeliciasapi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a3343315fbe1a4b5d19944764cd5fb1b849a21f2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e8f118aafd4d1a4a4aa1687cea4280083f556f3f")]
 [assembly: System.Reflection.AssemblyProductAttribute("megadeliciasapi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("megadeliciasapi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
