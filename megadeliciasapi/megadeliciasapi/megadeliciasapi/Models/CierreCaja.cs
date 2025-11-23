@@ -31,6 +31,6 @@ namespace megadeliciasapi.Models
         [ForeignKey("UsuarioId")]
         public Usuario Usuario { get; set; }
 
-        public ICollection<MovimientoCaja> MovimientosIncluidos { get; set; }
+        public ICollection<MovimientoCaja> MovimientosIncluidos { get; set; } = new List<MovimientoCaja>();
     }
 }
