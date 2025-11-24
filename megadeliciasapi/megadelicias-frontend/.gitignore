@@ -41,3 +41,12 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# ---------------------------------
+# AGREGADO PARA .NET / C# (Bin y Obj)
+# ---------------------------------
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userprefs
