@@ -1,18 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CajaPanelComponent } from './caja-panel';
 
-import { CajaPanel } from './caja-panel';
-
-describe('CajaPanel', () => {
-  let component: CajaPanel;
-  let fixture: ComponentFixture<CajaPanel>;
+describe('CajaPanelComponent', () => {
+  let component: CajaPanelComponent;
+  let fixture: ComponentFixture<CajaPanelComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CajaPanel]
-    })
-    .compileComponents();
+      imports: [CajaPanelComponent]
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(CajaPanel);
+    fixture = TestBed.createComponent(CajaPanelComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
