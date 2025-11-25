@@ -1,1 +1,57 @@
-<p>inventario-panel works!</p>
+<div class="panel-container">
+
+  <h2>Inventario</h2>
+
+  <div class="acciones">
+    <input type="text"
+           placeholder="Buscar por nombre o código..."
+           [(ngModel)]="filtro">
+
+    <button (click)="cargarInventario()">🔄 Recargar</button>
+  </div>
+
+  <div *ngIf="cargando" class="loader">Cargando...</div>
+
+  <table *ngIf="!cargando" class="tabla">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre</th>
+        <th>Stock</th>
+        <th>Mínimo</th>
+        <th>Costo</th>
+        <th>Unidad</th>
+        <th>Activo</th>
+        <th style="width: 140px;">Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let item of inventarioFiltrado">
+        <td>{{ item.codigo }}</td>
+        <td>{{ item.nombre }}</td>
+        <td>{{ item.stockActual }}</td>
+
+        <td [class.alerta]="item.stockActual <= item.stockMinimo">
+          {{ item.stockMinimo }}
+        </td>
+
+        <td>{{ item.costoUnitario | currency }}</td>
+        <td>{{ item.unidadMedida }}</td>
+
+        <td>
+          <span [class.activo]="item.activo"
+                [class.inactivo]="!item.activo">
+            {{ item.activo ? "Sí" : "No" }}
+          </span>
+        </td>
+
+        <td>
+          <button class="btn-editar" (click)="editarItem(item)">✏️ Editar</button>
+          <button class="btn-eliminar" (click)="eliminarItem(item.id)">🗑️ Eliminar</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
