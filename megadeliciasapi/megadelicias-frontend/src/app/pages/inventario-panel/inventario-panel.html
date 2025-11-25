@@ -1,1 +1,255 @@
-<p>inventario-panel works!</p>
+<div class="p-6 bg-gray-50 min-h-screen font-sans">
+  
+  <h1 class="text-3xl font-bold mb-8 text-gray-800 border-b pb-4">Control de Inventario</h1>
+
+  <div class="flex flex-col lg:flex-row gap-8 mb-10">
+    
+    <div class="w-full lg:w-1/3 bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-fit">
+      <h2 class="text-xl font-bold mb-6 text-indigo-600 flex items-center gap-2">
+        📦 Registrar Movimiento
+      </h2>
+
+      <div *ngIf="error" class="bg-red-100 text-red-700 p-3 mb-4 rounded text-sm border-l-4 border-red-500 animate-pulse">
+        {{ error }}
+      </div>
+      <div *ngIf="mensaje" class="bg-green-100 text-green-700 p-3 mb-4 rounded text-sm border-l-4 border-green-500">
+        {{ mensaje }}
+      </div>
+
+      <form (ngSubmit)="guardarMovimiento()">
+        
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">Producto</label>
+          <select [(ngModel)]="nuevoMovimiento.itemId" (change)="onProductoSeleccionado()" name="itemId" 
+                  class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500 transition">
+            <option [value]="0">-- Selecciona --</option>
+            <option *ngFor="let item of inventarioItems" [value]="item.id">
+              {{ item.nombre }}
+            </option>
+          </select>
+        </div>
+
+        <div *ngIf="itemSeleccionado" class="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg flex flex-col gap-2 shadow-sm animate-fade-in">
+          <h3 class="text-xs font-bold text-blue-800 uppercase tracking-wide flex items-center gap-1">
+            ℹ️ Estado Actual
+          </h3>
+          <div class="flex justify-between text-sm text-gray-700 border-b border-blue-200 pb-1">
+            <span>Stock:</span>
+            <span class="font-bold" [ngClass]="itemSeleccionado.stockActual < itemSeleccionado.stockMinimo ? 'text-red-600' : 'text-blue-700'">
+              {{ itemSeleccionado.stockActual }} {{ itemSeleccionado.unidadMedida }}
+            </span>
+          </div>
+          <div class="flex justify-between text-sm text-gray-700">
+            <span>Costo Prom.:</span>
+            <span class="font-bold text-gray-900">L {{ itemSeleccionado.costoUnitario | number:'1.2-2' }}</span>
+          </div>
+          <div class="mt-1">
+             <span class="bg-blue-200 text-blue-800 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">
+               {{ itemSeleccionado.categoria }}
+             </span>
+          </div>
+        </div>
+
+        <div class="flex gap-4 mb-5">
+          <div class="w-1/2">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Tipo</label>
+            <select [(ngModel)]="nuevoMovimiento.tipo" name="tipo" class="w-full bg-gray-50 border rounded-lg p-2.5">
+              <option value="Entrada">📥 Entrada (+)</option>
+              <option value="Salida">📤 Salida (-)</option>
+            </select>
+          </div>
+          <div class="w-1/2">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Cantidad</label>
+            <input type="number" [(ngModel)]="nuevoMovimiento.cantidad" name="cantidad" min="1" class="w-full bg-gray-50 border rounded-lg p-2.5">
+          </div>
+        </div>
+
+        <div class="mb-5" *ngIf="nuevoMovimiento.tipo === 'Entrada'">
+          <label class="block text-indigo-900 text-sm font-bold mb-2">Nuevo Costo Unitario (L)</label>
+          <div class="relative">
+             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">L</span>
+             <input type="number" [(ngModel)]="nuevoMovimiento.costoUnitario" name="costo" 
+                   class="w-full pl-8 bg-white border border-indigo-200 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-gray-700 text-sm font-bold mb-2">Motivo</label>
+          <input type="text" [(ngModel)]="nuevoMovimiento.motivo" name="motivo" placeholder="Ej: Compra semanal"
+                 class="w-full bg-gray-50 border rounded-lg p-2.5">
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg shadow-md transition hover:shadow-lg">
+          Guardar Movimiento
+        </button>
+      </form>
+    </div>
+
+    <div class="w-full lg:w-2/3">
+      
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+           Inventario General
+        </h2>
+        
+        <div class="flex gap-2 w-full sm:w-auto">
+          <button (click)="abrirModalCrear()" 
+                  class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm flex items-center gap-2 shadow-sm transition transform hover:scale-105">
+            <span></span> Nuevo
+          </button>
+
+          <div class="flex gap-2 flex-grow">
+            <input type="text" [(ngModel)]="busqueda" (keyup.enter)="cargarDatos()" placeholder="Buscar producto..." 
+                   class="border rounded-lg p-2 text-sm w-full focus:outline-none focus:border-indigo-500">
+            <button (click)="cargarDatos()" class="bg-gray-800 text-white px-3 py-2 rounded-lg text-sm hover:bg-black transition">
+              🔍
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative overflow-x-auto shadow-md sm:rounded-lg bg-white max-h-[500px]">
+        <table class="w-full text-sm text-left text-gray-500">
+          <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 z-10">
+            <tr>
+              <th class="px-6 py-3">Código</th>
+              <th class="px-6 py-3">Nombre</th>
+              <th class="px-6 py-3">Categoría</th>
+              <th class="px-6 py-3 text-center">Stock</th>
+              <th class="px-6 py-3 text-right">Costo U.</th>
+              <th class="px-6 py-3 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of inventarioItems" class="bg-white border-b hover:bg-indigo-50 transition">
+              <td class="px-6 py-4 font-mono text-xs">{{ item.codigo }}</td>
+              <td class="px-6 py-4 font-medium text-gray-900">{{ item.nombre }}</td>
+              <td class="px-6 py-4">
+                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded border border-purple-200">
+                  {{ item.categoria }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-center">
+                <span [ngClass]="item.stockActual < 5 ? 'bg-red-100 text-red-800 border-red-200' : 'bg-green-100 text-green-800 border-green-200'" 
+                      class="px-2 py-1 rounded font-bold border text-xs">
+                  {{ item.stockActual }} {{ item.unidadMedida }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-right">L {{ item.costoUnitario | number:'1.2-2' }}</td>
+              <td class="px-6 py-4 text-right font-bold text-gray-800">L {{ item.valorTotal | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="inventarioItems.length === 0">
+              <td colspan="6" class="p-8 text-center text-gray-400 italic">
+                No hay productos. ¡Usa el botón "Nuevo" para crear uno!
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+    <h2 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+      ⏱️ Movimientos Recientes
+    </h2>
+    <div class="relative overflow-x-auto">
+      <table class="w-full text-sm text-left text-gray-500">
+        <thead class="text-xs text-gray-700 uppercase bg-gray-200">
+          <tr>
+            <th class="px-6 py-3">Fecha</th>
+            <th class="px-6 py-3">Producto</th>
+            <th class="px-6 py-3">Tipo</th>
+            <th class="px-6 py-3">Cant.</th>
+            <th class="px-6 py-3">Costo</th>
+            <th class="px-6 py-3">Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mov of movimientosRecientes" class="bg-white border-b hover:bg-gray-50">
+            <td class="px-6 py-4 text-xs">{{ mov.fecha | date:'dd/MM/yy h:mm a' }}</td>
+            <td class="px-6 py-4 font-medium text-gray-900">{{ mov.itemNombre }}</td>
+            <td class="px-6 py-4">
+              <span [ngClass]="mov.tipo === 'Entrada' ? 'text-green-700 bg-green-100' : 'text-orange-700 bg-orange-100'" 
+                    class="px-2 py-1 rounded text-xs font-bold uppercase">
+                {{ mov.tipo }}
+              </span>
+            </td>
+            <td class="px-6 py-4 font-bold">{{ mov.cantidad }}</td>
+            <td class="px-6 py-4">L {{ mov.costoUnitario | number:'1.2-2' }}</td>
+            <td class="px-6 py-4 italic text-gray-500">{{ mov.motivo }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="mostrarModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 flex items-center justify-center z-50 p-4 transition-opacity">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform scale-100 animate-fade-in-down">
+      
+      <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-white font-bold text-lg"> Nuevo Producto</h3>
+        <button (click)="cerrarModal()" class="text-white hover:text-gray-200 text-2xl font-bold">&times;</button>
+      </div>
+
+      <div class="p-6">
+        <form (ngSubmit)="guardarNuevoProducto()">
+          
+          <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Código (Opcional)</label>
+            <input [(ngModel)]="nuevoProducto.codigo" name="codigo" type="text" placeholder="Ej: FRU-009"
+                   class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Nombre <span class="text-red-500">*</span></label>
+            <input [(ngModel)]="nuevoProducto.nombre" name="nombre" type="text" placeholder="Ej: Sandía" required
+                   class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Categoría <span class="text-red-500">*</span></label>
+            <select [(ngModel)]="nuevoProducto.categoriaId" name="categoriaId" required
+                    class="w-full border border-gray-300 rounded-lg p-2.5 bg-white">
+              <option [value]="0">-- Selecciona --</option>
+              <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
+            </select>
+          </div>
+
+          <div class="flex gap-4 mb-6">
+            <div class="w-1/2">
+              <label class="block text-gray-700 text-sm font-bold mb-2">Unidad</label>
+              <select [(ngModel)]="nuevoProducto.unidadMedida" name="unidad" class="w-full border rounded-lg p-2.5 bg-white">
+                <option value="Unidad">Unidad</option>
+                <option value="Libras">Libras</option>
+                <option value="Litros">Litros</option>
+                <option value="Botella">Botella</option>
+                <option value="Paquete">Paquete</option>
+                <option value="Mazo">Mazo</option>
+                <option value="Galon">Galon</option>
+              </select>
+            </div>
+            <div class="w-1/2">
+              <label class="block text-gray-700 text-sm font-bold mb-2">Stock Mín.</label>
+              <input [(ngModel)]="nuevoProducto.stockMinimo" name="minimo" type="number" 
+                     class="w-full border rounded-lg p-2.5">
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t">
+            <button type="button" (click)="cerrarModal()" 
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition">
+              Cancelar
+            </button>
+            <button type="submit" 
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow transition hover:shadow-md">
+              Guardar
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
