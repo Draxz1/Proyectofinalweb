@@ -84,7 +84,7 @@
              class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-2">
           <div class="text-sm text-gray-500">Usuario: {{ mov.usuario?.nombre || '—' }}</div>
           <div class="text-lg font-bold">Monto: L. {{ mov.monto }}</div>
-          <div class="text-sm text-gray-500">Método: {{ mov.metodo }}</div>
+          <div class="text-sm text-gray-500">Método: {{ mov.metodoPago?.nombre }}</div>
           <div class="text-xs text-gray-400">{{ mov.fecha | date:'short' }}</div>
         </div>
 

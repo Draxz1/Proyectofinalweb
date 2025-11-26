@@ -73,9 +73,9 @@ namespace megadeliciasapi.Controllers
         public async Task<IActionResult> GetMetodosPago()
         {
             var metodos = await _context.MetodosPago
-                .Where(m => m.Activo) // ✅ Solo métodos activos
                 .Select(m => new { m.Id, m.Nombre })
                 .ToListAsync();
+
             
             return Ok(metodos);
         }
@@ -100,7 +100,8 @@ namespace megadeliciasapi.Controllers
 
                 // ✅ 2. Validar método de pago POR ID (más robusto)
                 var metodoPago = await _context.MetodosPago
-                    .FirstOrDefaultAsync(m => m.Id == dto.MetodoPagoId && m.Activo);
+                        .FirstOrDefaultAsync(m => m.Id == dto.MetodoPagoId);
+
 
                 if (metodoPago == null)
                     return BadRequest(new { message = "Método de pago no válido o inactivo" });
