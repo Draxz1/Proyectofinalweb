@@ -1,34 +1,13 @@
 import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth';
 import { BehaviorSubject, timer, forkJoin, Subject, of } from 'rxjs';
 import { switchMap, catchError, takeUntil, tap } from 'rxjs/operators';
+import { ChangeDetectorRef } from '@angular/core';
+import { LucideAngularModule } from 'lucide-angular';
 
-interface Orden {
-  id: number;
-  estado: string;
-  total: number;
-  mesaId?: number;
-  meseroNombre?: string;
-  fechaCreacion?: string | Date;
-  // agrega más campos si tu API devuelve otros
-}
-
-interface Movimiento {
-  id?: number;
-  monto: number;
-  metodo: string;
-  fecha?: string | Date;
-  usuario?: { nombre: string };
-}
-
-// ✅ Interfaces tipadas
-interface MetodoPago {
-  id: number;
-  nombre: string;
-}
 
 interface Orden {
   id: number;
@@ -52,14 +31,14 @@ interface Movimiento {
 @Component({
   selector: 'app-caja-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CurrencyPipe, LucideAngularModule],
   templateUrl: './caja-panel.html',
   styleUrls: ['./caja-panel.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CajaPanelComponent implements OnInit, OnDestroy {
 
-  // --- Estado reactivo (fuente de la verdad) ---
+  // --- Estado reactivo ---
   private ordenesSubject = new BehaviorSubject<Orden[]>([]);
   ordenes$ = this.ordenesSubject.asObservable();
 
@@ -91,7 +70,7 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     return this.metodosPagoSubject.value || [];
   }
 
-  // internals
+  // Internals
   private destroy$ = new Subject<void>();
   private http = inject(HttpClient);
   private authService = inject(AuthService);
@@ -189,11 +168,17 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     ).subscribe();
   }
 
-  // Helpers para template
+  // --- Métodos requeridos por template ---
   setFiltro(filtro: string) { this.filtroActual = filtro; }
 
   trackByOrden(_index: number, item: Orden) { return item.id; }
   trackByMovimiento(_index: number, item: Movimiento) { return item.id ?? _index; }
+
+  getCantidadPorEstado(estado: string) {
+    const ordenes = this.ordenesSubject.value || [];
+    if (estado === 'Todos') return ordenes.length;
+    return ordenes.filter(o => o.estado === estado).length;
+  }
 
   getColorEstado(estado?: string) {
     switch (estado) {
@@ -217,6 +202,7 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     }
   }
 
+  // --- Helpers privados ---
   private _isDifferentOrdenes(a: Orden[], b: Orden[]) {
     if (!a || !b) return true;
     if (a.length !== b.length) return true;
@@ -227,16 +213,23 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   }
 
   private _isDifferentMovimientos(a: Movimiento[], b: Movimiento[]) {
-    if (!a || !b) return true;
-    if (a.length !== b.length) return true;
-    if (a.length === 0) return false;
-    const lastA = a[a.length - 1];
-    const lastB = b[b.length - 1];
-    return lastA.monto !== lastB.monto || lastA.fecha !== lastB.fecha || lastA.metodo !== lastB.metodo;
-  }
+  if (!a || !b) return true;
+  if (a.length !== b.length) return true;
+  if (a.length === 0) return false;
+
+  const lastA = a[a.length - 1];
+  const lastB = b[b.length - 1];
+
+  // Comparamos el nombre del método de pago en lugar de 'metodo'
+  const metodoA = lastA.metodoPago?.nombre ?? '';
+  const metodoB = lastB.metodoPago?.nombre ?? '';
+
+  return lastA.monto !== lastB.monto || lastA.fecha !== lastB.fecha || metodoA !== metodoB;
+}
+
 
   // Dev util: obtiene cantidad por estado desde la fuente reactiva
-  getCantidadPorEstado(estado: string) {
+  getCantidadPorEstadoDev(estado: string) {
     const ordenes = this.ordenesSubject.value || [];
     if (estado === 'Todos') return ordenes.length;
     return ordenes.filter(o => o.estado === estado).length;
