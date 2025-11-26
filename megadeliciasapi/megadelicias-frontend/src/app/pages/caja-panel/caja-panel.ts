@@ -1,8 +1,28 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth';
+import { BehaviorSubject, timer, forkJoin, Subject, of } from 'rxjs';
+import { switchMap, catchError, takeUntil, tap } from 'rxjs/operators';
+
+interface Orden {
+  id: number;
+  estado: string;
+  total: number;
+  mesaId?: number;
+  meseroNombre?: string;
+  fechaCreacion?: string | Date;
+  // agrega más campos si tu API devuelve otros
+}
+
+interface Movimiento {
+  id?: number;
+  monto: number;
+  metodo: string;
+  fecha?: string | Date;
+  usuario?: { nombre: string };
+}
 
 // ✅ Interfaces tipadas
 interface MetodoPago {
@@ -39,196 +59,143 @@ interface Movimiento {
 })
 export class CajaPanelComponent implements OnInit, OnDestroy {
 
-  ordenes: Orden[] = [];
-  movimientos: Movimiento[] = [];
-  metodosPago: MetodoPago[] = []; // ✅ CORRECTO: Array de objetos
-  
-  filtroActual: string = 'Todos';
-  loading: boolean = false;
-  metodoSeleccionadoPorOrden: { [ordenId: number]: number } = {}; // ✅ Guarda el ID del método
+  // --- Estado reactivo (fuente de la verdad) ---
+  private ordenesSubject = new BehaviorSubject<Orden[]>([]);
+  ordenes$ = this.ordenesSubject.asObservable();
 
-  private intervalId: any;
+  private movimientosSubject = new BehaviorSubject<Movimiento[]>([]);
+  movimientos$ = this.movimientosSubject.asObservable();
+
+  private metodosPagoSubject = new BehaviorSubject<string[]>([]);
+  metodosPago$ = this.metodosPagoSubject.asObservable();
+
+  private loadingSubject = new BehaviorSubject<boolean>(false);
+  loading$ = this.loadingSubject.asObservable();
+
+  // Estado no reactivo/UX
+  filtroActual = 'Todos';
+  metodoSeleccionadoPorOrden: { [ordenId: number]: string } = {};
+
+  // Compatibilidad para tu template actual
+  get ordenesFiltradas() {
+    const ordenes = this.ordenesSubject.value || [];
+    if (this.filtroActual === 'Todos') return ordenes;
+    return ordenes.filter(o => o.estado === this.filtroActual);
+  }
+
+  get movimientos() {
+    return this.movimientosSubject.value || [];
+  }
+
+  get metodosPago() {
+    return this.metodosPagoSubject.value || [];
+  }
+
+  // internals
+  private destroy$ = new Subject<void>();
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private apiUrl = 'http://localhost:5143/api/caja';
+  private pollIntervalMs = 5000;
 
   private getHeaders() {
     const token = this.authService.getToken();
     return { headers: new HttpHeaders({ 'Authorization': `Bearer ${token}` }) };
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.fetchMetodosPago();
-    this.fetchOrdenes();
-    this.fetchMovimientos();
 
-    this.intervalId = setInterval(() => {
-      this.fetchOrdenes();
-      this.fetchMovimientos();
-    }, 5000);
+    // Polling reactivo para órdenes y movimientos
+    timer(0, this.pollIntervalMs).pipe(
+      takeUntil(this.destroy$),
+      switchMap(() => {
+        const o$ = this.http.get<Orden[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
+          catchError(err => {
+            console.error('Error obteniendo órdenes:', err);
+            return of([] as Orden[]);
+          })
+        );
+        const m$ = this.http.get<Movimiento[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
+          catchError(err => {
+            console.error('Error obteniendo movimientos:', err);
+            return of([] as Movimiento[]);
+          })
+        );
+        return forkJoin([o$, m$]);
+      }),
+      tap(([ordenes, movimientos]) => {
+        if (this._isDifferentOrdenes(this.ordenesSubject.value, ordenes)) {
+          this.ordenesSubject.next(ordenes);
+        }
+        if (this._isDifferentMovimientos(this.movimientosSubject.value, movimientos)) {
+          this.movimientosSubject.next(movimientos);
+        }
+      })
+    ).subscribe();
   }
 
-  ngOnDestroy() {
-    if (this.intervalId) clearInterval(this.intervalId);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  // ✅ Obtener métodos de pago como objetos {id, nombre}
   fetchMetodosPago() {
-    this.http.get<any[]>(`${this.apiUrl}/metodos-pago`, this.getHeaders()).subscribe({
-      next: (data) => {
-        // Normalizar a minúsculas para compatibilidad
-        this.metodosPago = data.map(m => ({
-          id: m.id || m.Id,
-          nombre: m.nombre || m.Nombre
-        }));
-        
-        console.log('✅ Métodos de pago cargados:', this.metodosPago);
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        console.error('❌ Error obteniendo métodos de pago:', err);
-        this.cdr.markForCheck();
-      }
-    });
+    this.http.get<any[]>(`${this.apiUrl}/metodos-pago`, this.getHeaders()).pipe(
+      takeUntil(this.destroy$),
+      catchError(err => {
+        console.error('Error obteniendo métodos de pago:', err);
+        return of([]);
+      }),
+      tap(data => {
+        const nombres = (data || []).map(m => (m.Nombre ?? m.nombre ?? m).toString());
+        this.metodosPagoSubject.next(nombres);
+      })
+    ).subscribe();
   }
 
-  fetchOrdenes() {
-    this.http.get<any[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).subscribe({
-      next: (data) => {
-        if (this.hasChangedOrdenes(data, this.ordenes)) {
-          this.ordenes = data.map(o => ({
-            id: o.id || o.Id,
-            mesaId: o.mesaId || o.MesaId,
-            meseroNombre: o.meseroNombre || o.MeseroNombre,
-            total: o.total || o.Total,
-            fechaCreacion: o.fechaCreacion || o.FechaCreacion,
-            estado: o.estado || o.Estado
-          }));
-          this.cdr.markForCheck();
-        }
-      },
-      error: (err) => {
-        console.error('❌ Error obteniendo órdenes:', err);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  fetchMovimientos() {
-    this.http.get<any[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).subscribe({
-      next: (data) => {
-        if (this.hasChangedMovimientos(data, this.movimientos)) {
-          this.movimientos = data;
-          this.cdr.markForCheck();
-        }
-      },
-      error: (err) => {
-        console.error('❌ Error obteniendo movimientos:', err);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  private hasChangedOrdenes(newData: any[], oldData: any[]): boolean {
-    if (newData.length !== oldData.length) return true;
-    
-    return newData.some((newOrden, i) => {
-      const oldOrden = oldData[i];
-      return !oldOrden || 
-             newOrden.id !== oldOrden.id || 
-             newOrden.estado !== oldOrden.estado ||
-             newOrden.total !== oldOrden.total;
-    });
-  }
-
-  private hasChangedMovimientos(newData: any[], oldData: any[]): boolean {
-    if (newData.length !== oldData.length) return true;
-    
-    return newData.some((newMov, i) => {
-      const oldMov = oldData[i];
-      return !oldMov || newMov.id !== oldMov.id;
-    });
-  }
-
-  ordenesFiltradas(): Orden[] {
-    if (this.filtroActual === 'Todos') return this.ordenes;
-    return this.ordenes.filter(o => o.estado === this.filtroActual);
-  }
-
-  getCantidadPorEstado(estado: string): number {
-    if (estado === 'Todos') return this.ordenes.length;
-    return this.ordenes.filter(o => o.estado === estado).length;
-  }
-
-  setFiltro(filtro: string) {
-    this.filtroActual = filtro;
-    this.cdr.markForCheck();
-  }
-
-  trackByOrden(index: number, item: any): number {
-    return item.id;
-  }
-
-  trackByMovimiento(index: number, item: any): number {
-    return item.id || index;
-  }
-
-  // ✅ MÉTODO CORREGIDO: Registrar pago
   registrarPago(orden: Orden) {
-    const metodoPagoId = this.metodoSeleccionadoPorOrden[orden.id];
-    
-    if (!metodoPagoId) {
-      alert('❌ Por favor selecciona un método de pago');
-      return;
-    }
-
-    console.log('💳 Registrando pago:', { 
-      ordenId: orden.id, 
-      metodoPagoId, 
-      monto: orden.total 
-    });
-
-    this.loading = true;
-    this.cdr.markForCheck();
-
+    const metodo = this.metodoSeleccionadoPorOrden[orden.id] || 'Efectivo';
     const url = `${this.apiUrl}/ordenes/${orden.id}/pagar`;
-    const payload = {
-      metodoPagoId: metodoPagoId,
-      monto: orden.total
-    };
 
-    this.http.post(url, payload, this.getHeaders()).subscribe({
-      next: (response: any) => {
-        console.log('✅ Pago registrado exitosamente:', response);
-        
-        // Eliminar orden de la lista
-        this.ordenes = this.ordenes.filter(o => o.id !== orden.id);
-        
-        // Recargar movimientos
-        this.fetchMovimientos();
-        
-        // Limpiar selección
-        delete this.metodoSeleccionadoPorOrden[orden.id];
-        
-        this.loading = false;
-        this.cdr.markForCheck();
-        
-        alert('✅ ' + (response.message || 'Pago registrado correctamente'));
-      },
-      error: (err) => {
-        console.error('❌ Error al registrar pago:', err);
-        
-        const errorMsg = err.error?.message || 'Error al registrar el pago';
-        alert(`❌ ${errorMsg}`);
-        
-        this.loading = false;
-        this.cdr.markForCheck();
-      }
-    });
+    this.loadingSubject.next(true);
+
+    this.http.post(url, { metodoPago: metodo }, this.getHeaders()).pipe(
+      takeUntil(this.destroy$),
+      catchError(err => {
+        console.error('Error al registrar el pago', err);
+        alert('Error al registrar el pago');
+        return of(null);
+      }),
+      tap(res => {
+        if (res !== null) {
+          const actuales = this.ordenesSubject.value.filter(o => o.id !== orden.id);
+          this.ordenesSubject.next(actuales);
+
+          // Recarga movimientos inmediatamente
+          this.http.get<Movimiento[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
+            catchError(err => {
+              console.error('Error recargando movimientos:', err);
+              return of([]);
+            }),
+            takeUntil(this.destroy$)
+          ).subscribe(movs => this.movimientosSubject.next(movs));
+
+          delete this.metodoSeleccionadoPorOrden[orden.id];
+        }
+        this.loadingSubject.next(false);
+      })
+    ).subscribe();
   }
 
-  getColorEstado(estado: string): string {
+  // Helpers para template
+  setFiltro(filtro: string) { this.filtroActual = filtro; }
+
+  trackByOrden(_index: number, item: Orden) { return item.id; }
+  trackByMovimiento(_index: number, item: Movimiento) { return item.id ?? _index; }
+
+  getColorEstado(estado?: string) {
     switch (estado) {
       case 'PENDIENTE': return 'border-l-4 border-l-yellow-500 bg-yellow-50/50';
       case 'EN_PROCESO': return 'border-l-4 border-l-blue-500 bg-blue-50/50';
@@ -239,7 +206,7 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     }
   }
 
-  getBadgeColor(estado: string): string {
+  getBadgeColor(estado?: string) {
     switch (estado) {
       case 'PENDIENTE': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'EN_PROCESO': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -248,5 +215,30 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
       case 'CANCELADO': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800';
     }
+  }
+
+  private _isDifferentOrdenes(a: Orden[], b: Orden[]) {
+    if (!a || !b) return true;
+    if (a.length !== b.length) return true;
+    if (a.length === 0) return false;
+    const lastA = a[a.length - 1];
+    const lastB = b[b.length - 1];
+    return lastA.id !== lastB.id || lastA.estado !== lastB.estado || lastA.total !== lastB.total;
+  }
+
+  private _isDifferentMovimientos(a: Movimiento[], b: Movimiento[]) {
+    if (!a || !b) return true;
+    if (a.length !== b.length) return true;
+    if (a.length === 0) return false;
+    const lastA = a[a.length - 1];
+    const lastB = b[b.length - 1];
+    return lastA.monto !== lastB.monto || lastA.fecha !== lastB.fecha || lastA.metodo !== lastB.metodo;
+  }
+
+  // Dev util: obtiene cantidad por estado desde la fuente reactiva
+  getCantidadPorEstado(estado: string) {
+    const ordenes = this.ordenesSubject.value || [];
+    if (estado === 'Todos') return ordenes.length;
+    return ordenes.filter(o => o.estado === estado).length;
   }
 }
