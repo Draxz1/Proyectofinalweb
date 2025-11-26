@@ -1,6 +1,5 @@
 namespace megadeliciasapi.DTOs
 {
-    // 1. Para mostrar la tabla de inventario (Imagen derecha)
     public class InventarioItemDto
     {
         public int Id { get; set; }
@@ -9,7 +8,7 @@ namespace megadeliciasapi.DTOs
         public string Categoria { get; set; }
         public int StockActual { get; set; }
         public decimal CostoUnitario { get; set; }
-        public decimal ValorTotal => StockActual * CostoUnitario; // Campo calculado
+        public decimal ValorTotal => StockActual * CostoUnitario; 
         public string UnidadMedida { get; set; }
     }
 

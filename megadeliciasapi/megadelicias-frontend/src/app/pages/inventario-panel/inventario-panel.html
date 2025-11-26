@@ -38,7 +38,7 @@
             <span class="font-bold" [ngClass]="itemSeleccionado.stockActual < itemSeleccionado.stockMinimo ? 'text-red-600' : 'text-blue-700'">
               {{ itemSeleccionado.stockActual }} {{ itemSeleccionado.unidadMedida }}
             </span>
-          </div>
+          </div>     
           <div class="flex justify-between text-sm text-gray-700">
             <span>Costo Prom.:</span>
             <span class="font-bold text-gray-900">L {{ itemSeleccionado.costoUnitario | number:'1.2-2' }}</span>

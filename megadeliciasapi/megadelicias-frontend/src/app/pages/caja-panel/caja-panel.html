@@ -1,101 +1,265 @@
-<div class="p-6 min-h-screen bg-gray-100 font-sans">
-
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
   <!-- Header -->
-  <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
-    <div>
-      <h1 class="text-3xl font-extrabold text-gray-800 flex items-center gap-3 tracking-tight">
-        <lucide-icon name="credit-card" class="w-8 h-8 text-green-600"></lucide-icon>
-        Panel de Caja
-      </h1>
-      <p class="text-gray-500 text-sm mt-1 ml-11">Control de movimientos y pagos</p>
+  <div class="mb-8">
+    <h1 class="text-4xl font-bold text-gray-800 mb-2">Panel de Caja</h1>
+    <p class="text-gray-600">Control de movimientos y pagos</p>
+  </div>
+
+  <!-- Filtros de Estado -->
+  <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap gap-3">
+      <!-- Botón Todos -->
+      <button
+        (click)="setFiltro('Todos')"
+        [class]="filtroActual === 'Todos' 
+          ? 'bg-gray-900 text-white' 
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+        class="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2">
+        Todos
+        <span class="bg-white/20 px-2 py-0.5 rounded-full text-sm">
+          {{ getCantidadPorEstado('Todos') }}
+        </span>
+      </button>
+
+      <!-- Botón Pendiente -->
+      <button
+        (click)="setFiltro('PENDIENTE')"
+        [class]="filtroActual === 'PENDIENTE' 
+          ? 'bg-yellow-500 text-white' 
+          : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'"
+        class="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2">
+        PENDIENTE
+        <span class="bg-white/30 px-2 py-0.5 rounded-full text-sm">
+          {{ getCantidadPorEstado('PENDIENTE') }}
+        </span>
+      </button>
+
+      <!-- Botón En Proceso -->
+      <button
+        (click)="setFiltro('EN_PROCESO')"
+        [class]="filtroActual === 'EN_PROCESO' 
+          ? 'bg-blue-500 text-white' 
+          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
+        class="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2">
+        EN_PROCESO
+        <span class="bg-white/30 px-2 py-0.5 rounded-full text-sm">
+          {{ getCantidadPorEstado('EN_PROCESO') }}
+        </span>
+      </button>
+
+      <!-- Botón Listo -->
+      <button
+        (click)="setFiltro('LISTO')"
+        [class]="filtroActual === 'LISTO' 
+          ? 'bg-green-500 text-white' 
+          : 'bg-green-50 text-green-700 hover:bg-green-100'"
+        class="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2">
+        LISTO
+        <span class="bg-white/30 px-2 py-0.5 rounded-full text-sm">
+          {{ getCantidadPorEstado('LISTO') }}
+        </span>
+      </button>
+
+      <!-- Botón Entregado -->
+      <button
+        (click)="setFiltro('ENTREGADO')"
+        [class]="filtroActual === 'ENTREGADO' 
+          ? 'bg-gray-500 text-white' 
+          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'"
+        class="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2">
+        ENTREGADO
+        <span class="bg-white/30 px-2 py-0.5 rounded-full text-sm">
+          {{ getCantidadPorEstado('ENTREGADO') }}
+        </span>
+      </button>
+
+      <!-- Botón Cancelado -->
+      <button
+        (click)="setFiltro('CANCELADO')"
+        [class]="filtroActual === 'CANCELADO' 
+          ? 'bg-red-500 text-white' 
+          : 'bg-red-50 text-red-700 hover:bg-red-100'"
+        class="px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2">
+        CANCELADO
+        <span class="bg-white/30 px-2 py-0.5 rounded-full text-sm">
+          {{ getCantidadPorEstado('CANCELADO') }}
+        </span>
+      </button>
     </div>
   </div>
 
-  <!-- Filtros de Órdenes Pendientes -->
-  <div class="flex flex-wrap gap-2 mb-8 bg-white p-2 rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-    <button *ngFor="let f of ['Todos','PENDIENTE','EN_PROCESO','LISTO','ENTREGADO','CANCELADO']"
-            (click)="setFiltro(f)"
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
-            [ngClass]="filtroActual === f ? 'bg-gray-900 text-white shadow-md' :
-                        (f==='PENDIENTE'?'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600':
-                         f==='EN_PROCESO'?'text-gray-500 hover:bg-blue-50 hover:text-blue-600':
-                         f==='LISTO'?'text-gray-500 hover:bg-green-50 hover:text-green-600':
-                         f==='ENTREGADO'?'text-gray-500 hover:bg-gray-100':'text-gray-500 hover:bg-red-50 hover:text-red-600')">
-      {{ f }}
-      <span class="ml-1 px-1.5 rounded text-xs bg-white/20">{{ getCantidadPorEstado(f) }}</span>
-    </button>
-  </div>
+  <!-- Grid: Órdenes + Movimientos -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- ===================== -->
+    <!-- COLUMNA 1: ÓRDENES -->
+    <!-- ===================== -->
+    <div class="space-y-4">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">
+        Órdenes Pendientes de Pago
+      </h2>
 
-  <!-- Órdenes Pendientes -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    <div *ngFor="let orden of ordenesFiltradas; trackBy: trackByOrden"
-         class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-200 flex flex-col overflow-hidden"
-         [ngClass]="getColorEstado(orden.estado)">
+      <!-- Mensaje si no hay órdenes -->
+      <div *ngIf="ordenesFiltradas().length === 0" 
+           class="bg-white rounded-xl shadow-sm p-8 text-center">
+        <div class="text-gray-400 mb-2">
+          <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <p class="text-gray-600 font-medium">No hay órdenes {{ filtroActual === 'Todos' ? 'pendientes' : 'en estado ' + filtroActual }}</p>
+      </div>
 
-      <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-start">
-        <div>
-          <h2 class="text-xl font-extrabold text-gray-800 tracking-tight">#{{ orden.id }}</h2>
-          <div class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
-            <lucide-icon name="clock" class="w-3.5 h-3.5"></lucide-icon>
-            {{ orden.fechaCreacion | date:'shortTime' }}
-            <span class="text-gray-300">|</span> Mesa {{ orden.mesaId }} - {{ orden.meseroNombre }}
+      <!-- Lista de órdenes -->
+      <div *ngFor="let orden of ordenesFiltradas(); trackBy: trackByOrden" 
+           [class]="getColorEstado(orden.estado)"
+           class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
+        
+        <!-- Header de la orden -->
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-2xl font-bold text-gray-900">#{{ orden.id }}</h3>
+            <p class="text-sm text-gray-600 mt-1">
+              <span class="font-medium">{{ orden.fechaCreacion | date: 'short' }}</span>
+              <span class="mx-2">|</span>
+              <span>Mesa {{ orden.mesaId }}</span>
+              <span *ngIf="orden.meseroNombre" class="mx-2">|</span>
+              <span *ngIf="orden.meseroNombre">{{ orden.meseroNombre }}</span>
+            </p>
+          </div>
+          
+          <!-- Badge de estado -->
+          <span [class]="getBadgeColor(orden.estado)"
+                class="px-3 py-1 rounded-full text-xs font-bold border uppercase">
+            {{ orden.estado }}
+          </span>
+        </div>
+
+        <!-- Total -->
+        <div class="mb-4 pb-4 border-b border-gray-200">
+          <p class="text-3xl font-bold text-gray-900">
+            L. {{ orden.total | number:'1.2-2' }}
+          </p>
+        </div>
+
+        <!-- Selector de método de pago + Botón registrar -->
+        <div class="space-y-3">
+          <!-- Dropdown de métodos de pago -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Método de Pago
+            </label>
+            <select 
+              [(ngModel)]="metodoSeleccionadoPorOrden[orden.id]"
+              class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-gray-900 font-medium">
+              <option [value]="undefined" disabled>Selecciona método de pago</option>
+              <option *ngFor="let metodo of metodosPago" [value]="metodo.id">
+                {{ metodo.nombre }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Botón Registrar Pago -->
+          <button
+            (click)="registrarPago(orden)"
+            [disabled]="loading || !metodoSeleccionadoPorOrden[orden.id]"
+            [class.opacity-50]="loading || !metodoSeleccionadoPorOrden[orden.id]"
+            [class.cursor-not-allowed]="loading || !metodoSeleccionadoPorOrden[orden.id]"
+            class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+            <svg *ngIf="!loading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <svg *ngIf="loading" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{{ loading ? 'Procesando...' : 'Registrar Pago' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- COLUMNA 2: MOVIMIENTOS -->
+    <!-- ===================== -->
+    <div class="space-y-4">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">
+        Movimientos de Caja
+      </h2>
+
+      <!-- Mensaje si no hay movimientos -->
+      <div *ngIf="movimientos.length === 0" 
+           class="bg-white rounded-xl shadow-sm p-8 text-center">
+        <div class="text-gray-400 mb-2">
+          <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="text-gray-600 font-medium">No hay movimientos registrados</p>
+      </div>
+
+      <!-- Lista de movimientos -->
+      <div *ngFor="let mov of movimientos; trackBy: trackByMovimiento"
+           class="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-shadow duration-200 border-l-4"
+           [class.border-l-green-500]="mov.tipo === 'INGRESO'"
+           [class.border-l-red-500]="mov.tipo === 'EGRESO'">
+        
+        <div class="flex justify-between items-start">
+          <!-- Info del movimiento -->
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <!-- Icono según tipo -->
+              <div class="p-2 rounded-lg"
+                   [class.bg-green-100]="mov.tipo === 'INGRESO'"
+                   [class.bg-red-100]="mov.tipo === 'EGRESO'">
+                <svg *ngIf="mov.tipo === 'INGRESO'" class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <svg *ngIf="mov.tipo === 'EGRESO'" class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                </svg>
+              </div>
+
+              <!-- Tipo de movimiento -->
+              <span class="font-bold text-gray-900 uppercase text-sm">
+                {{ mov.tipo }}
+              </span>
+            </div>
+
+            <!-- Descripción -->
+            <p *ngIf="mov.descripcion" class="text-sm text-gray-600 mb-1 ml-11">
+              {{ mov.descripcion }}
+            </p>
+
+            <!-- Método de pago -->
+            <p *ngIf="mov.metodoPago" class="text-xs text-gray-500 ml-11">
+              <span class="font-semibold">Método:</span> {{ mov.metodoPago.nombre }}
+            </p>
+
+            <!-- Usuario -->
+            <p *ngIf="mov.usuario" class="text-xs text-gray-500 ml-11">
+              <span class="font-semibold">Usuario:</span> {{ mov.usuario.nombre }}
+            </p>
+
+            <!-- Fecha -->
+            <p class="text-xs text-gray-400 ml-11 mt-1">
+              {{ mov.fecha | date: 'short' }}
+            </p>
+          </div>
+
+          <!-- Monto -->
+          <div class="text-right">
+            <p class="text-xl font-bold"
+               [class.text-green-600]="mov.tipo === 'INGRESO'"
+               [class.text-red-600]="mov.tipo === 'EGRESO'">
+              {{ mov.tipo === 'INGRESO' ? '+' : '-' }}L. {{ mov.monto | number:'1.2-2' }}
+            </p>
           </div>
         </div>
-        <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border shadow-sm"
-              [ngClass]="getBadgeColor(orden.estado)">
-          {{ orden.estado || 'SIN ESTADO' }}
-        </span>
-      </div>
-
-      <div class="p-5 flex-1 bg-white/40">
-        <div class="text-lg font-bold text-gray-800">Total: L. {{ orden.total }}</div>
-      </div>
-
-      <!-- Muestra el dropdown y botón si el estado no es CANCELADO -->
-      <div *ngIf="orden.estado && orden.estado !== 'CANCELADO'" class="p-4 bg-white border-t border-gray-100 grid gap-3">
-        <select 
-          [(ngModel)]="metodoSeleccionadoPorOrden[orden.id]" 
-          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
-          required>
-          <option value="" disabled selected>Selecciona método de pago</option>
-          <option *ngFor="let metodo of metodosPago" [value]="metodo">
-            {{ metodo }}
-          </option>
-        </select>
-        <button (click)="registrarPago(orden)"
-                class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
-                [disabled]="!metodoSeleccionadoPorOrden[orden.id]">
-          <lucide-icon name="credit-card" class="w-4 h-4"></lucide-icon> Registrar Pago
-        </button>
-      </div>
-
-      <!-- Si está cancelado, muestra mensaje -->
-      <div *ngIf="orden.estado === 'CANCELADO'" class="p-4 bg-white border-t border-gray-100">
-        <span class="text-xs text-red-600 font-medium">Orden cancelada</span>
-      </div>
-    </div>
-
-    <div *ngIf="ordenesFiltradas.length === 0" class="col-span-full py-20 text-center text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
-      <div class="mb-2"><lucide-icon name="credit-card" class="w-10 h-10 mx-auto text-gray-300"></lucide-icon></div>
-      <p>No hay órdenes en {{ filtroActual }}</p>
-    </div>
-  </div>
-
-  <!-- Movimientos de Caja -->
-  <div class="mt-10">
-    <h2 class="text-2xl font-bold mb-4">Movimientos de Caja</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      <div *ngFor="let mov of movimientos; trackBy: trackByMovimiento"
-           class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-2">
-        <div class="text-sm text-gray-500">Usuario: {{ mov.usuario.nombre }}</div>
-        <div class="text-lg font-bold">Monto: L. {{ mov.monto }}</div>
-        <div class="text-sm text-gray-500">Método: {{ mov.metodo }}</div>
-        <div class="text-xs text-gray-400">{{ mov.fecha | date:'short' }}</div>
-      </div>
-      <div *ngIf="movimientos.length === 0" class="col-span-full text-center text-gray-400 py-10 bg-white rounded-xl border-2 border-dashed border-gray-200">
-        <p>No hay movimientos registrados</p>
       </div>
     </div>
   </div>
-
 </div>

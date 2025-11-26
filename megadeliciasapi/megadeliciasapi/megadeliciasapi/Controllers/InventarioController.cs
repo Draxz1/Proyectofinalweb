@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using megadeliciasapi.Data;   // Acceso a la BD
-using megadeliciasapi.Models; // Acceso a las Tablas
-using megadeliciasapi.DTOs;   // Acceso a los DTOs que acabamos de crear
+using megadeliciasapi.Data;   
+using megadeliciasapi.Models; 
+using megadeliciasapi.DTOs;   
 
 namespace megadeliciasapi.Controllers
 {
@@ -10,7 +10,6 @@ namespace megadeliciasapi.Controllers
     [ApiController]
     public class InventarioController : ControllerBase
     {
-        // ⚠️ NOTA: Usamos 'ApplicationDbContext' (en inglés) tal como está en tu carpeta Data
         private readonly ApplicationDbContext _context;
 
         public InventarioController(ApplicationDbContext context)
@@ -18,9 +17,6 @@ namespace megadeliciasapi.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. GET: Obtener lista de items (Tabla)
-        // ==========================================
         [HttpGet]
         public async Task<ActionResult<List<InventarioItemDto>>> GetInventario([FromQuery] string busqueda = "")
         {
