@@ -1,99 +1,337 @@
 ﻿using megadeliciasapi.Data;
+using megadeliciasapi.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace megadeliciasapi.Controllers
 {
-    [Route("api/[controller]")]        // La ruta será /api/Contabilidad
+    [Route("api/[controller]")]
     [ApiController]
-    [Authorize]                        // Igual que Plato, requiere estar logueado
+    [Authorize]
     public class ContabilidadController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        // Inyectamos el contexto SOLO para mantener el mismo patrón que PlatoController,
-        // aunque en este ejemplo no lo estamos usando para no depender de SQL Server.
         public ContabilidadController(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        // 1. READ - Resumen contable del día actual
-        // GET: api/Contabilidad/resumen-diario
-        [HttpGet("resumen-diario")]
-        public ActionResult<ResumenContableDto> GetResumenDiario()
+        // ==========================
+        // 1. CIERRE DIARIO (HOY)
+        // ==========================
+        [HttpGet("cierre-diario")]
+        public async Task<ActionResult<CierreResumenDto>> GetCierreDiario()
         {
             var hoy = DateTime.Today;
-
-            // ⚠ Aquí estamos devolviendo DATOS DE PRUEBA (mock),
-            // para que la API funcione aunque la BD no esté configurada.
-            var resumen = new ResumenContableDto
-            {
-                FechaInicio = hoy.ToString("yyyy-MM-dd"),
-                FechaFin = hoy.ToString("yyyy-MM-dd"),
-                TotalVentas = 1500.00m,
-                TotalFacturado = 1500.00m,
-                TotalImpuesto = 225.00m,
-                Comentario = "Resumen contable simulado para el día actual."
-            };
-
-            return Ok(resumen);
+            return await CalcularCierrePorFecha(hoy);
         }
 
-        // 2. READ - Resumen por rango de fechas
-        // GET: api/Contabilidad/resumen-rango?fechaInicio=2025-11-01&fechaFin=2025-11-21
-        [HttpGet("resumen-rango")]
-        public ActionResult<ResumenContableDto> GetResumenRango(
-            [FromQuery] DateTime fechaInicio,
-            [FromQuery] DateTime fechaFin)
+        // ==========================
+        // 2. CIERRE POR FECHA
+        // ==========================
+        [HttpGet("cierre-por-fecha")]
+        public async Task<ActionResult<CierreResumenDto>> GetCierrePorFecha([FromQuery] DateTime fecha)
         {
-            if (fechaFin < fechaInicio)
+            var cierreGuardado = await _context.CierresCaja
+                .Where(c => c.Desde.Date <= fecha.Date && c.Hasta.Date >= fecha.Date)
+                .OrderByDescending(c => c.CreadoEn)
+                .FirstOrDefaultAsync();
+
+            if (cierreGuardado != null)
             {
-                return BadRequest("La fecha fin no puede ser menor que la fecha inicio.");
+                decimal cajaInicialGuardada = 0;
+                if (cierreGuardado.Diferencia == 0)
+                {
+                    cajaInicialGuardada = cierreGuardado.EfectivoContado - cierreGuardado.TotalEfectivo;
+                    if (cajaInicialGuardada < 0) cajaInicialGuardada = 0;
+                }
+
+                decimal efectivoEsperadoGuardado = cajaInicialGuardada + cierreGuardado.TotalEfectivo;
+
+                var dtoGuardado = new CierreResumenDto
+                {
+                    Fecha = fecha.ToString("yyyy-MM-dd"),
+                    TotalEfectivo = cierreGuardado.TotalEfectivo,
+                    TotalTarjeta = cierreGuardado.TotalTarjetas,
+                    TotalTransferencia = cierreGuardado.TotalTransferencias,
+                    CajaInicial = cajaInicialGuardada,
+                    EfectivoContado = cierreGuardado.EfectivoContado,
+                    EfectivoEsperado = efectivoEsperadoGuardado,
+                    Diferencia = cierreGuardado.Diferencia,
+                    Cuadro = cierreGuardado.Diferencia == 0
+                };
+                return Ok(dtoGuardado);
             }
 
-            // Igual: datos simulados
-            var resumen = new ResumenContableDto
-            {
-                FechaInicio = fechaInicio.ToString("yyyy-MM-dd"),
-                FechaFin = fechaFin.ToString("yyyy-MM-dd"),
-                TotalVentas = 35000.00m,
-                TotalFacturado = 35000.00m,
-                TotalImpuesto = 5250.00m,
-                Comentario = "Resumen contable simulado para el rango de fechas."
-            };
-
-            return Ok(resumen);
+            return await CalcularCierrePorFecha(fecha.Date);
         }
 
-        // 3. CREATE - Registrar un "cierre contable" (solo admin)
-        // POST: api/Contabilidad/cierre
-        [HttpPost("cierre")]
-        [Authorize(Roles = "admin")]
-        public ActionResult<CierreContableRespuestaDto> RegistrarCierre([FromBody] CierreContableSolicitudDto solicitud)
+        // Cálculo interno de cierre por fecha
+        private async Task<ActionResult<CierreResumenDto>> CalcularCierrePorFecha(DateTime fecha)
         {
-            if (solicitud == null)
-            {
-                return BadRequest("Los datos del cierre son requeridos.");
-            }
+            var fechaInicio = fecha.Date;
+            var fechaFin = fecha.Date.AddDays(1).AddTicks(-1);
 
-            if (solicitud.FechaCierre == default)
-            {
-                return BadRequest("La fecha de cierre no es válida.");
-            }
+            var pagos = await _context.Pagos
+                .Include(p => p.MetodoPago)
+                .Where(p => p.FechaPago >= fechaInicio && p.FechaPago <= fechaFin)
+                .ToListAsync();
 
-            // Aquí normalmente guardarías en BD.
-            // Por ahora solo simulamos la operación.
-            var respuesta = new CierreContableRespuestaDto
+            var metodos = await _context.MetodosPago.ToListAsync();
+
+            int? idEfectivo = metodos.FirstOrDefault(m =>
+                m.Nombre != null && m.Nombre.Trim().ToLower().Contains("efectivo"))?.Id;
+
+            int? idTarjeta = metodos.FirstOrDefault(m =>
+                m.Nombre != null && (m.Nombre.Trim().ToLower().Contains("tarjeta") ||
+                                     m.Nombre.Trim().ToLower().Contains("pos")) )?.Id;
+
+            int? idTransferencia = metodos.FirstOrDefault(m =>
+                m.Nombre != null && m.Nombre.Trim().ToLower().Contains("transfer"))?.Id;
+
+            decimal totalEfectivo = pagos
+                .Where(p => p.MetodoPago != null &&
+                            ((idEfectivo.HasValue && p.MetodoPagoId == idEfectivo.Value) ||
+                             (!idEfectivo.HasValue && p.MetodoPago!.Nombre != null &&
+                              p.MetodoPago.Nombre.Trim().ToLower().Contains("efectivo"))))
+                .Sum(p => p.MontoPago);
+
+            decimal totalTarjeta = pagos
+                .Where(p => p.MetodoPago != null &&
+                            ((idTarjeta.HasValue && p.MetodoPagoId == idTarjeta.Value) ||
+                             (!idTarjeta.HasValue && p.MetodoPago!.Nombre != null &&
+                              (p.MetodoPago.Nombre.Trim().ToLower().Contains("tarjeta") ||
+                               p.MetodoPago.Nombre.Trim().ToLower().Contains("pos")))))
+                .Sum(p => p.MontoPago);
+
+            decimal totalTransferencia = pagos
+                .Where(p => p.MetodoPago != null &&
+                            ((idTransferencia.HasValue && p.MetodoPagoId == idTransferencia.Value) ||
+                             (!idTransferencia.HasValue && p.MetodoPago!.Nombre != null &&
+                              p.MetodoPago.Nombre.Trim().ToLower().Contains("transfer"))))
+                .Sum(p => p.MontoPago);
+
+            var cierreGuardado = await _context.CierresCaja
+                .Where(c => c.Desde.Date <= fecha.Date && c.Hasta.Date >= fecha.Date)
+                .OrderByDescending(c => c.CreadoEn)
+                .FirstOrDefaultAsync();
+
+            decimal cajaInicial = 0;
+            decimal efectivoContado = cierreGuardado?.EfectivoContado ?? 0;
+
+            decimal efectivoEsperado = cajaInicial + totalEfectivo;
+            decimal diferencia = efectivoContado - efectivoEsperado;
+
+            var dto = new CierreResumenDto
             {
-                FechaCierre = solicitud.FechaCierre.ToString("yyyy-MM-dd"),
-                Usuario = string.IsNullOrWhiteSpace(solicitud.Usuario) ? "admin" : solicitud.Usuario,
-                TotalVentasCerradas = 12345.67m,
-                Mensaje = "Cierre contable registrado (simulado)."
+                Fecha = fecha.ToString("yyyy-MM-dd"),
+                TotalEfectivo = totalEfectivo,
+                TotalTarjeta = totalTarjeta,
+                TotalTransferencia = totalTransferencia,
+                CajaInicial = cajaInicial,
+                EfectivoContado = efectivoContado,
+                EfectivoEsperado = efectivoEsperado,
+                Diferencia = diferencia,
+                Cuadro = diferencia == 0
             };
 
-            // 201 Created, igual estilo que PostPlato
-            return CreatedAtAction(nameof(GetResumenDiario), new { }, respuesta);
+            return Ok(dto);
+        }
+
+        // ==========================
+        // 3. CREAR CIERRE
+        // ==========================
+        [HttpPost("crear-cierre")]
+        public async Task<ActionResult> CrearCierre([FromBody] CrearCierreContabilidadDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (dto.CajaInicial < 0)
+                return BadRequest(new { message = "La caja inicial no puede ser negativa." });
+
+            if (dto.EfectivoContado < 0)
+                return BadRequest(new { message = "El efectivo contado no puede ser negativo." });
+
+            var fecha = dto.Fecha.Date;
+            var fechaInicio = fecha.Date;
+            var fechaFin = fecha.Date.AddDays(1).AddTicks(-1);
+
+            var cierreExistente = await _context.CierresCaja
+                .Where(c => c.Desde.Date <= fecha.Date && c.Hasta.Date >= fecha.Date)
+                .FirstOrDefaultAsync();
+
+            if (cierreExistente != null)
+            {
+                return BadRequest(new { message = "Ya existe un cierre para esta fecha." });
+            }
+
+            var pagos = await _context.Pagos
+                .Include(p => p.MetodoPago)
+                .Where(p => p.FechaPago >= fechaInicio && p.FechaPago <= fechaFin)
+                .ToListAsync();
+
+            var metodos = await _context.MetodosPago.ToListAsync();
+
+            int? idEfectivo = metodos.FirstOrDefault(m =>
+                m.Nombre != null && m.Nombre.Trim().ToLower().Contains("efectivo"))?.Id;
+
+            int? idTarjeta = metodos.FirstOrDefault(m =>
+                m.Nombre != null && (m.Nombre.Trim().ToLower().Contains("tarjeta") ||
+                                     m.Nombre.Trim().ToLower().Contains("pos")) )?.Id;
+
+            int? idTransferencia = metodos.FirstOrDefault(m =>
+                m.Nombre != null && m.Nombre.Trim().ToLower().Contains("transfer"))?.Id;
+
+            decimal totalEfectivo = pagos
+                .Where(p => p.MetodoPago != null &&
+                            ((idEfectivo.HasValue && p.MetodoPagoId == idEfectivo.Value) ||
+                             (!idEfectivo.HasValue && p.MetodoPago!.Nombre != null &&
+                              p.MetodoPago.Nombre.Trim().ToLower().Contains("efectivo"))))
+                .Sum(p => p.MontoPago);
+
+            decimal totalTarjeta = pagos
+                .Where(p => p.MetodoPago != null &&
+                            ((idTarjeta.HasValue && p.MetodoPagoId == idTarjeta.Value) ||
+                             (!idTarjeta.HasValue && p.MetodoPago!.Nombre != null &&
+                              (p.MetodoPago.Nombre.Trim().ToLower().Contains("tarjeta") ||
+                               p.MetodoPago.Nombre.Trim().ToLower().Contains("pos")))))
+                .Sum(p => p.MontoPago);
+
+            decimal totalTransferencia = pagos
+                .Where(p => p.MetodoPago != null &&
+                            ((idTransferencia.HasValue && p.MetodoPagoId == idTransferencia.Value) ||
+                             (!idTransferencia.HasValue && p.MetodoPago!.Nombre != null &&
+                              p.MetodoPago.Nombre.Trim().ToLower().Contains("transfer"))))
+                .Sum(p => p.MontoPago);
+
+            decimal efectivoEsperado = dto.CajaInicial + totalEfectivo;
+            decimal diferencia = dto.EfectivoContado - efectivoEsperado;
+
+            var movimientos = await _context.MovimientosCaja
+                .Where(m => m.Fecha >= fechaInicio && m.Fecha <= fechaFin && m.CierreId == null)
+                .ToListAsync();
+
+            var cierre = new Models.CierreCaja
+            {
+                UsuarioId = dto.UsuarioId,
+                Desde = fechaInicio,
+                Hasta = fechaFin,
+                TotalEfectivo = totalEfectivo,
+                TotalTarjetas = totalTarjeta,
+                TotalTransferencias = totalTransferencia,
+                EfectivoContado = dto.EfectivoContado,
+                Diferencia = diferencia,
+                Observaciones = dto.Observaciones,
+                CreadoEn = DateTime.Now
+            };
+
+            _context.CierresCaja.Add(cierre);
+            await _context.SaveChangesAsync();
+
+            foreach (var movimiento in movimientos)
+            {
+                movimiento.CierreId = cierre.Id;
+            }
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Cierre creado correctamente.",
+                cierre = new CierreResumenDto
+                {
+                    Fecha = fecha.ToString("yyyy-MM-dd"),
+                    TotalEfectivo = totalEfectivo,
+                    TotalTarjeta = totalTarjeta,
+                    TotalTransferencia = totalTransferencia,
+                    CajaInicial = dto.CajaInicial,
+                    EfectivoContado = dto.EfectivoContado,
+                    EfectivoEsperado = efectivoEsperado,
+                    Diferencia = diferencia,
+                    Cuadro = diferencia == 0
+                }
+            });
+        }
+
+        // ==========================
+        // 4. RESUMEN INGRESOS vs GASTOS
+        // ==========================
+        [HttpGet("resumen-ingresos-gastos")]
+        public async Task<ActionResult<IngresosGastosDto>> GetResumenIngresosGastos(
+            [FromQuery] DateTime desde,
+            [FromQuery] DateTime hasta,
+            [FromQuery] decimal gastos)
+        {
+            if (hasta.Date < desde.Date)
+                return BadRequest(new { message = "La fecha hasta no puede ser menor que la fecha desde." });
+
+            if (gastos < 0)
+                return BadRequest(new { message = "Los gastos no pueden ser negativos." });
+
+            var desdeDate = desde.Date;
+            var hastaDate = hasta.Date.AddDays(1).AddTicks(-1);
+
+            var totalIngresos = await _context.MovimientosCaja
+                .Where(m => m.Fecha >= desdeDate && m.Fecha <= hastaDate && m.Tipo == "INGRESO")
+                .SumAsync(m => (decimal?)m.Monto) ?? 0m;
+
+            var resultado = totalIngresos - gastos;
+
+            var dto = new IngresosGastosDto
+            {
+                Desde = desdeDate.ToString("yyyy-MM-dd"),
+                Hasta = hastaDate.ToString("yyyy-MM-dd"),
+                TotalIngresos = totalIngresos,
+                TotalGastos = gastos,
+                Resultado = resultado,
+                EstaEnNegativo = resultado < 0
+            };
+
+            return Ok(dto);
+        }
+
+        // ==========================
+        // 5. BALANCE GENERAL
+        // ==========================
+        // GET: api/Contabilidad/balance-general?fecha=2025-11-23
+        [HttpGet("balance-general")]
+        public async Task<ActionResult<BalanceGeneralDto>> GetBalanceGeneral([FromQuery] DateTime? fecha)
+        {
+            var fechaCorte = (fecha ?? DateTime.Today).Date;
+            var fechaFin = fechaCorte.AddDays(1).AddTicks(-1);
+
+            // Activo: tomamos la "caja" (ingresos - egresos) hasta la fecha
+            var totalIngresos = await _context.MovimientosCaja
+                .Where(m => m.Fecha <= fechaFin && m.Tipo == "INGRESO")
+                .SumAsync(m => (decimal?)m.Monto) ?? 0m;
+
+            var totalEgresos = await _context.MovimientosCaja
+                .Where(m => m.Fecha <= fechaFin && m.Tipo == "EGRESO")
+                .SumAsync(m => (decimal?)m.Monto) ?? 0m;
+
+            var caja = totalIngresos - totalEgresos;
+            if (caja < 0) caja = 0; // no mostramos activo negativo
+
+            // En este proyecto académico asumimos que no hay pasivos registrados
+            decimal pasivo = 0m;
+
+            // Patrimonio neto = Activo - Pasivo
+            decimal patrimonio = caja - pasivo;
+
+            var dto = new BalanceGeneralDto
+            {
+                FechaCorte = fechaCorte.ToString("yyyy-MM-dd"),
+                Activo = caja,
+                Pasivo = pasivo,
+                PatrimonioNeto = patrimonio,
+                TotalActivos = caja,
+                TotalPasivoPatrimonio = pasivo + patrimonio,
+                Cuadra = caja == pasivo + patrimonio
+            };
+
+            return Ok(dto);
         }
     }
 }
