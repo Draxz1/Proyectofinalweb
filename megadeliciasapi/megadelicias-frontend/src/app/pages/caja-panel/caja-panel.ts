@@ -1,7 +1,6 @@
 import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { LucideAngularModule } from 'lucide-angular';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth';
 import { BehaviorSubject, timer, forkJoin, Subject, of } from 'rxjs';
@@ -25,10 +24,35 @@ interface Movimiento {
   usuario?: { nombre: string };
 }
 
+// ✅ Interfaces tipadas
+interface MetodoPago {
+  id: number;
+  nombre: string;
+}
+
+interface Orden {
+  id: number;
+  mesaId?: number;
+  meseroNombre?: string;
+  total: number;
+  fechaCreacion: string | Date;
+  estado: string;
+}
+
+interface Movimiento {
+  id: number;
+  monto: number;
+  tipo: string;
+  fecha: string | Date;
+  usuario?: { nombre: string };
+  metodoPago?: { nombre: string };
+  descripcion?: string;
+}
+
 @Component({
   selector: 'app-caja-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './caja-panel.html',
   styleUrls: ['./caja-panel.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -71,6 +95,7 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private http = inject(HttpClient);
   private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
   private apiUrl = 'http://localhost:5143/api/caja';
   private pollIntervalMs = 5000;
 

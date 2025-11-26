@@ -15,7 +15,6 @@ namespace megadeliciasapi.Controllers
     {
  feature/inventario-completo
         // ⚠️ NOTA: Usamos 'ApplicationDbContext' (en inglés) tal como está en tu carpeta Data
-=======
  main
         private readonly ApplicationDbContext _context;
 
