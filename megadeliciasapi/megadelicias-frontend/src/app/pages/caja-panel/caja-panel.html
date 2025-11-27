@@ -31,7 +31,6 @@
           <div>
             <h2 class="text-xl font-extrabold text-gray-800 tracking-tight">#{{ orden.id }}</h2>
             <div class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
-              <lucide-icon name="clock" class="w-3.5 h-3.5"></lucide-icon>
               {{ orden.fechaCreacion | date:'shortTime' }}
               <span class="text-gray-300">|</span> Mesa {{ orden.mesaId }} - {{ orden.meseroNombre }}
             </div>
@@ -59,7 +58,7 @@
           <button (click)="registrarPago(orden)"
                   class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
                   [disabled]="!metodoSeleccionadoPorOrden[orden.id]">
-            <lucide-icon name="credit-card" class="w-4 h-4"></lucide-icon> Registrar Pago
+            Registrar Pago
           </button>
         </div>
 
@@ -69,7 +68,7 @@
       </div>
 
       <div *ngIf="ordenes.length === 0" class="col-span-full py-20 text-center text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
-        <div class="mb-2"><lucide-icon name="credit-card" class="w-10 h-10 mx-auto text-gray-300"></lucide-icon></div>
+        <div class="mb-2"></div>
         <p>No hay órdenes en {{ filtroActual }}</p>
       </div>
     </ng-container>
