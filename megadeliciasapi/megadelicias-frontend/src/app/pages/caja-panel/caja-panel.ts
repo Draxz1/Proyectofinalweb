@@ -6,8 +6,6 @@ import { AuthService } from '../../services/auth';
 import { BehaviorSubject, timer, forkJoin, Subject, of } from 'rxjs';
 import { switchMap, catchError, takeUntil, tap } from 'rxjs/operators';
 import { ChangeDetectorRef } from '@angular/core';
-import { LucideAngularModule } from 'lucide-angular';
-
 
 interface Orden {
   id: number;
@@ -31,7 +29,7 @@ interface Movimiento {
 @Component({
   selector: 'app-caja-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyPipe, LucideAngularModule],
+  imports: [CommonModule, FormsModule, CurrencyPipe],
   templateUrl: './caja-panel.html',
   styleUrls: ['./caja-panel.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -213,20 +211,19 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   }
 
   private _isDifferentMovimientos(a: Movimiento[], b: Movimiento[]) {
-  if (!a || !b) return true;
-  if (a.length !== b.length) return true;
-  if (a.length === 0) return false;
+    if (!a || !b) return true;
+    if (a.length !== b.length) return true;
+    if (a.length === 0) return false;
 
-  const lastA = a[a.length - 1];
-  const lastB = b[b.length - 1];
+    const lastA = a[a.length - 1];
+    const lastB = b[b.length - 1];
 
-  // Comparamos el nombre del método de pago en lugar de 'metodo'
-  const metodoA = lastA.metodoPago?.nombre ?? '';
-  const metodoB = lastB.metodoPago?.nombre ?? '';
+    // Comparamos el nombre del método de pago en lugar de 'metodo'
+    const metodoA = lastA.metodoPago?.nombre ?? '';
+    const metodoB = lastB.metodoPago?.nombre ?? '';
 
-  return lastA.monto !== lastB.monto || lastA.fecha !== lastB.fecha || metodoA !== metodoB;
-}
-
+    return lastA.monto !== lastB.monto || lastA.fecha !== lastB.fecha || metodoA !== metodoB;
+  }
 
   // Dev util: obtiene cantidad por estado desde la fuente reactiva
   getCantidadPorEstadoDev(estado: string) {
