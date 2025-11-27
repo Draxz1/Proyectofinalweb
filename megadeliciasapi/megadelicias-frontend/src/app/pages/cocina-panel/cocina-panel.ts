@@ -1,13 +1,12 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-cocina-panel',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule],
   templateUrl: './cocina-panel.html',
   styleUrl: './cocina-panel.css'
 })
@@ -33,7 +32,6 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.fetchOrdenes();
-    // Polling cada 5 segundos
     this.intervalId = setInterval(() => this.fetchOrdenes(), 5000);
   }
 
@@ -44,8 +42,13 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
   fetchOrdenes() {
     this.http.get<any[]>(this.apiUrl, this.getHeaders()).subscribe({
       next: (data) => {
-        // OPTIMIZACIÓN: Solo si los datos fueron cambiados
-        // Esto evita que Angular redibuje la pantalla innecesariamente
+        // Normalizar estados para evitar problemas de mayúsculas
+        data.forEach(orden => {
+          if (orden.estado) {
+            orden.estado = orden.estado.toUpperCase().trim();
+          }
+        });
+        
         if (JSON.stringify(data) !== JSON.stringify(this.ordenes)) {
           this.ordenes = data;
         }
@@ -54,9 +57,8 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  // OPTIMIZACIÓN VISUAL: Función vital para evitar parpadeo en html
   trackByOrden(index: number, item: any): number {
-    return item.id; // Angular usará el ID para identificar la tarjeta en el DOM
+    return item.id;
   }
 
   get ordenesFiltradas() {
@@ -81,7 +83,6 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
     
     this.http.put(url, { estado: nuevoEstado }, this.getHeaders()).subscribe({
       next: () => {
-        // Forzamos una actualización inmediata
         this.fetchOrdenes(); 
         this.loading = false;
       },
@@ -90,6 +91,25 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  // NUEVA FUNCIÓN: Notificar al mesero
+  notificarMesero(orden: any) {
+    // Aquí puedes implementar la notificación real (WebSocket, Push, etc.)
+    // Por ahora mostramos un mensaje
+    const mensaje = `¡Orden #${orden.id} lista para ${orden.mesero}!`;
+    
+    // Opción 1: Usar una alerta visual
+    if (confirm(mensaje + '\n\n¿Deseas marcar como notificado?')) {
+      // Aquí podrías hacer una llamada al backend para registrar la notificación
+      console.log('Mesero notificado:', orden.mesero);
+      
+      // Opcional: Cambiar automáticamente a ENTREGADO después de notificar
+      // this.cambiarEstado(orden.id, 'ENTREGADO');
+    }
+    
+    // Opción 2: Podrías usar un servicio de notificaciones
+    // this.notificationService.notifyWaiter(orden.mesero, mensaje);
   }
 
   getColorEstado(estado: string) {
@@ -104,7 +124,7 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
   }
   
   getBadgeColor(estado: string) {
-      switch(estado) {
+    switch(estado) {
       case 'PENDIENTE': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'EN_PROCESO': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'LISTO': return 'bg-green-100 text-green-800 border-green-200';
@@ -112,5 +132,13 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
       case 'CANCELADO': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800';
     }
+  }
+
+  // DEBUG: Función para verificar estados (puedes eliminarla después)
+  verificarEstado(orden: any) {
+    console.log('Orden ID:', orden.id);
+    console.log('Estado:', orden.estado);
+    console.log('Tipo:', typeof orden.estado);
+    console.log('Longitud:', orden.estado?.length);
   }
 }

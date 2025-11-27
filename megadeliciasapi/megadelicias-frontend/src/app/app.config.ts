@@ -1,16 +1,16 @@
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
-
-import { FormsModule } from '@angular/forms'; 
-import { provideHttpClient } from '@angular/common/http'; 
+import { provideClientHydration } from '@angular/platform-browser';
+// 1. IMPORTANTE: Importar esto
+import { provideHttpClient, withFetch } from '@angular/common/http';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes),
-
-    
-    provideHttpClient(),            
-    importProvidersFrom(FormsModule) 
+    provideZoneChangeDetection({ eventCoalescing: true }), 
+    provideRouter(routes), 
+    provideClientHydration(),
+    // 2. IMPORTANTE: Agregarlo aquí
+    provideHttpClient(withFetch()) 
   ]
 };

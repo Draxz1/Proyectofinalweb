@@ -26,9 +26,6 @@ namespace megadeliciasapi.Controllers
         [HttpPost("venta")]
         public async Task<IActionResult> RegistrarVenta([FromBody] object ventaData)
         {
-            // Aquí implementaremos la lógica para mover una Orden a Venta
-            // y registrar el MovimientoCaja.
-            // Por ahora, devolvemos éxito para que el frontend no falle.
             return Ok(new { message = "Venta registrada correctamente (Simulado)" });
         }
 
@@ -48,103 +45,158 @@ namespace megadeliciasapi.Controllers
 
         // 3. OBTENER ÓRDENES PENDIENTES DE PAGO 
         [HttpGet("ordenes-pendientes")]
-public async Task<IActionResult> GetOrdenesPendientes()
-{
-    var estadosValidos = new[] { "LISTO", "ENTREGADO", "EN_PROCESO", "PENDIENTE", "CANCELADO" }; 
-
-    // Mostrar todas las órdenes sin venta, sin importar el estado
-    var ordenes = await _context.Ordenes
-    .Where(o => o.Venta == null)
-    .Include(o => o.Estado) // Aseguramos cargar el estado
-    .Select(o => new
-    {
-        o.Id,
-        o.MesaId,
-        MeseroNombre = o.Usuario.Nombre,
-        Total = o.TotalOrden,
-        FechaCreacion = o.Fecha,
-        Estado = o.Estado.Nombre ?? "SIN ESTADO" // Si no tiene estado, muestra "SIN ESTADO"
-    })
-    .ToListAsync();
-
-    return Ok(ordenes);
-}
-
-        [HttpGet("metodos-pago")]
-            [AllowAnonymous] 
-            public async Task<IActionResult> GetMetodosPago()
+        public async Task<IActionResult> GetOrdenesPendientes()
         {
-        var metodos = await _context.MetodosPago
-            .Select(m => new { m.Id, m.Nombre })
-            .ToListAsync();
-        return Ok(metodos);
+            // ✅ Mostrar todas las órdenes sin venta (no pagadas)
+            var ordenes = await _context.Ordenes
+                .Where(o => o.Venta == null) // Solo órdenes sin venta
+                .Include(o => o.Estado)
+                .Include(o => o.Usuario) // ✅ CRÍTICO: Incluir usuario
+                .OrderByDescending(o => o.Fecha)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.MesaId,
+                    MeseroNombre = o.Usuario != null ? o.Usuario.Nombre : "Desconocido",
+                    Total = o.TotalOrden,
+                    FechaCreacion = o.Fecha,
+                    Estado = o.Estado != null ? o.Estado.Nombre : "PENDIENTE"
+                })
+                .ToListAsync();
+
+            return Ok(ordenes);
         }
 
-        // 4. REGISTRAR PAGO DE UNA ORDEN (crea Venta + Pago)
+        // 4. OBTENER MÉTODOS DE PAGO
+        [HttpGet("metodos-pago")]
+        [AllowAnonymous] 
+        public async Task<IActionResult> GetMetodosPago()
+        {
+            var metodos = await _context.MetodosPago
+                .Select(m => new { m.Id, m.Nombre })
+                .ToListAsync();
+
+            
+            return Ok(metodos);
+        }
+
+        // 5. ✅ REGISTRAR PAGO DE UNA ORDEN (CORREGIDO)
         [HttpPost("ordenes/{id}/pagar")]
         public async Task<IActionResult> RegistrarPago(int id, [FromBody] RegistrarPagoDto dto)
         {
-            // Validar método de pago
-            var metodoPago = await _context.MetodosPago
-                .FirstOrDefaultAsync(m => m.Nombre == dto.MetodoPago);
-            if (metodoPago == null)
-                return BadRequest(new { message = "Método de pago no válido." });
-
-            // Validar orden
-            var orden = await _context.Ordenes
-                .Include(o => o.Estado)
-                .FirstOrDefaultAsync(o => o.Id == id && o.Venta == null);
-
-            if (orden == null)
-                return BadRequest(new { message = "Orden no encontrada o ya pagada." });
-
-            var estadosValidos = new[] { "LISTO", "ENTREGADO" };
-            if (!estadosValidos.Contains(orden.Estado.Nombre))
-                return BadRequest(new { message = "La orden no está lista para ser pagada." });
-
-            // Crear Venta
-            var venta = new Venta
+            try
             {
-                OrdenId = orden.Id,
-                UsuarioId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!),
-                TotalVenta = orden.TotalOrden,
-                Fecha = DateTime.Now
-            };
+                // ✅ 1. Validar que la orden existe y no está pagada
+                var orden = await _context.Ordenes
+                    .Include(o => o.Estado)
+                    .Include(o => o.Usuario)
+                    .FirstOrDefaultAsync(o => o.Id == id);
 
-            _context.Ventas.Add(venta);
-            await _context.SaveChangesAsync();
+                if (orden == null)
+                    return NotFound(new { message = "Orden no encontrada" });
 
-            // Crear Pago
-            var pago = new Pago
+                if (orden.Venta != null)
+                    return BadRequest(new { message = "Esta orden ya fue pagada" });
+
+                // ✅ 2. Validar método de pago POR ID (más robusto)
+                var metodoPago = await _context.MetodosPago
+                        .FirstOrDefaultAsync(m => m.Id == dto.MetodoPagoId);
+
+
+                if (metodoPago == null)
+                    return BadRequest(new { message = "Método de pago no válido o inactivo" });
+
+                // ✅ 3. Validar monto (opcional, pero recomendado)
+                if (dto.Monto <= 0)
+                    return BadRequest(new { message = "El monto debe ser mayor a 0" });
+
+                if (dto.Monto != orden.TotalOrden)
+                    return BadRequest(new { message = $"El monto ({dto.Monto}) no coincide con el total de la orden ({orden.TotalOrden})" });
+
+                // ✅ 4. Obtener usuario actual del token JWT
+                var usuarioIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(usuarioIdClaim))
+                    return Unauthorized(new { message = "Usuario no autenticado" });
+
+                var usuarioId = int.Parse(usuarioIdClaim);
+
+                // ✅ 5. Crear Venta
+                var venta = new Venta
+                {
+                    OrdenId = orden.Id,
+                    UsuarioId = usuarioId,
+                    TotalVenta = orden.TotalOrden,
+                    Fecha = DateTime.Now
+                };
+
+                _context.Ventas.Add(venta);
+                await _context.SaveChangesAsync(); // Guardar para obtener venta.Id
+
+                // ✅ 6. Crear Pago
+                var pago = new Pago
+                {
+                    VentaId = venta.Id,
+                    MetodoPagoId = metodoPago.Id,
+                    MontoPago = dto.Monto,
+                    Estado = "completado",
+                    FechaPago = DateTime.Now
+                };
+
+                _context.Pagos.Add(pago);
+                await _context.SaveChangesAsync(); // Guardar para obtener pago.Id
+
+                // ✅ 7. Crear MovimientoCaja (INGRESO)
+                var movimiento = new MovimientoCaja
+                {
+                    UsuarioId = usuarioId,
+                    Tipo = "INGRESO",
+                    Monto = dto.Monto,
+                    MetodoPagoId = metodoPago.Id,
+                    Descripcion = $"Pago Orden #{orden.Id} - Mesa {orden.MesaId}",
+                    PagoId = pago.Id,
+                    Fecha = DateTime.Now
+                };
+                _context.MovimientosCaja.Add(movimiento);
+
+                // ✅ 8. Cambiar estado de la orden a ENTREGADO (opcional)
+                var estadoEntregado = await _context.EstadosOrden  
+                    .FirstOrDefaultAsync(e => e.Nombre == "ENTREGADO");
+                
+                if (estadoEntregado != null)
+                {
+                    orden.EstadoId = estadoEntregado.Id;
+                    _context.Ordenes.Update(orden);
+                }
+
+                // ✅ 9. Guardar todos los cambios
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Pago registrado correctamente",
+                    ventaId = venta.Id,
+                    pagoId = pago.Id,
+                    movimientoId = movimiento.Id,
+                    ordenId = orden.Id,
+                    metodoPago = metodoPago.Nombre,
+                    monto = dto.Monto
+                });
+            }
+            catch (Exception ex)
             {
-                VentaId = venta.Id,
-                MetodoPagoId = metodoPago.Id,
-                MontoPago = orden.TotalOrden,
-                Estado = "completado",
-                FechaPago = DateTime.Now
-            };
+                // ✅ Log detallado del error (solo en desarrollo)
+                Console.WriteLine($"❌ ERROR en RegistrarPago: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
 
-            _context.Pagos.Add(pago);
-            await _context.SaveChangesAsync();
-
-            // Opcional: registrar MovimientoCaja asociado al pago (si quieres llevar control de caja por movimiento)
-            var movimiento = new MovimientoCaja
-            {
-                UsuarioId = venta.UsuarioId,
-                Tipo = "INGRESO",
-                Monto = orden.TotalOrden,
-                MetodoPagoId = metodoPago.Id,
-                Descripcion = $"Pago Orden {orden.Id}",
-                PagoId = pago.Id,
-                Fecha = DateTime.Now
-            };
-            _context.MovimientosCaja.Add(movimiento);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Pago registrado correctamente." });
+                return StatusCode(500, new
+                {
+                    message = "Error interno al registrar el pago",
+                    error = ex.Message
+                });
+            }
         }
 
-        // 5. CIERRE DIARIO 
+        // 6. CIERRE DIARIO 
         [HttpGet("cierre-diario")]
         public async Task<IActionResult> GetCierreDiario()
         {
@@ -168,7 +220,7 @@ public async Task<IActionResult> GetOrdenesPendientes()
             });
         }
 
-        // 6. HISTORIAL DE VENTAS/PAGOS 
+        // 7. HISTORIAL DE VENTAS/PAGOS 
         [HttpGet("historial")]
         public async Task<IActionResult> GetHistorial([FromQuery] string fecha, [FromQuery] string metodoPago = "Todos")
         {
@@ -205,30 +257,26 @@ public async Task<IActionResult> GetOrdenesPendientes()
         }
 
         // -------------------------
-        // NUEVOS ENDPOINTS: CIERRES
+        // ENDPOINTS DE CIERRES
         // -------------------------
 
-        // POST: api/Caja/cierres  -> crear un cierre (snapshot) y asociar movimientos
         [HttpPost("cierres")]
         public async Task<IActionResult> CrearCierre([FromBody] CrearCierreDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             if (dto.Hasta < dto.Desde) return BadRequest(new { message = "El rango de fechas no es válido" });
 
-            // 1) Traer movimientos en el rango que aún no estén asignados a un cierre
             var movimientos = await _context.MovimientosCaja
                 .Where(m => m.Fecha >= dto.Desde && m.Fecha <= dto.Hasta && m.CierreId == null)
                 .Include(m => m.MetodoPago)
                 .ToListAsync();
 
-            // 2) Intentar resolver MetodoPagoId para Efectivo/Tarjeta/Transferencia por nombre (case-insensitive)
             var metodos = await _context.MetodosPago.ToListAsync();
 
             int? idEfectivo = metodos.FirstOrDefault(x => x.Nombre != null && x.Nombre.Trim().ToLower().Contains("efectivo"))?.Id;
             int? idTarjeta = metodos.FirstOrDefault(x => x.Nombre != null && (x.Nombre.Trim().ToLower().Contains("tarjeta") || x.Nombre.Trim().ToLower().Contains("pos")))?.Id;
             int? idTransferencia = metodos.FirstOrDefault(x => x.Nombre != null && x.Nombre.Trim().ToLower().Contains("transfer"))?.Id;
 
-            // 3) Calcular totales por metodo (si id no existe, quedará en 0 y se hará fallback por nombre)
             decimal totalEfectivo = movimientos
                 .Where(m => idEfectivo.HasValue ? m.MetodoPagoId == idEfectivo.Value : false)
                 .Sum(m => m.Monto);
@@ -241,7 +289,6 @@ public async Task<IActionResult> GetOrdenesPendientes()
                 .Where(m => idTransferencia.HasValue ? m.MetodoPagoId == idTransferencia.Value : false)
                 .Sum(m => m.Monto);
 
-            // 4) Fallback: agrupar por nombre si no se detectaron ids
             if (!idEfectivo.HasValue || !idTarjeta.HasValue || !idTransferencia.HasValue)
             {
                 var byName = movimientos
@@ -266,7 +313,6 @@ public async Task<IActionResult> GetOrdenesPendientes()
                 }
             }
 
-            // 5) Crear CierreCaja
             var cierre = new CierreCaja
             {
                 UsuarioId = dto.UsuarioId,
@@ -284,7 +330,6 @@ public async Task<IActionResult> GetOrdenesPendientes()
             await _context.CierresCaja.AddAsync(cierre);
             await _context.SaveChangesAsync();
 
-            // 6) Asociar movimientos al cierre (marcar CierreId)
             foreach (var m in movimientos)
             {
                 m.CierreId = cierre.Id;
@@ -294,7 +339,6 @@ public async Task<IActionResult> GetOrdenesPendientes()
             return CreatedAtAction(nameof(GetCierrePorId), new { id = cierre.Id }, cierre);
         }
 
-        // GET: api/Caja/cierres
         [HttpGet("cierres")]
         public async Task<IActionResult> ListarCierres()
         {
@@ -306,7 +350,6 @@ public async Task<IActionResult> GetOrdenesPendientes()
             return Ok(lista);
         }
 
-        // GET: api/Caja/cierres/{id}
         [HttpGet("cierres/{id}")]
         public async Task<IActionResult> GetCierrePorId(int id)
         {
@@ -321,10 +364,11 @@ public async Task<IActionResult> GetOrdenesPendientes()
         }
     }
 
-    // DTOs auxiliares para este controlador:
+    // ✅ DTOs ACTUALIZADOS
     public class RegistrarPagoDto
     {
-        public string MetodoPago { get; set; } = string.Empty;
+        public int MetodoPagoId { get; set; } // ✅ Ahora recibe el ID
+        public decimal Monto { get; set; }     // ✅ Agregado para validación
     }
 
     public class CrearCierreDto
