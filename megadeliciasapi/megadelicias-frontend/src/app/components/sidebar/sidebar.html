@@ -1,49 +1,66 @@
-<aside class="w-64 bg-gray-800 text-white p-4 h-screen">
-  <h2 class="text-xl font-bold mb-4">MegaDelicias</h2>
+<aside class="w-64 bg-gray-800 text-white p-4 h-screen flex flex-col justify-between">
+  
+  <div>
+    <h2 class="text-xl font-bold mb-4">MegaDelicias</h2>
+    <p class="text-xs text-gray-400 mb-4 uppercase font-mono border-b border-gray-700 pb-2">
+      ROL: {{ rol || 'NINGUNO' }}
+    </p>
 
-  <nav class="flex flex-col space-y-2">
+    <nav class="flex flex-col space-y-2">
 
-    <a routerLink="/dashboard" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Dashboard
-    </a>
+      <a *ngIf="isAdmin"
+         routerLink="/dashboard" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Dashboard
+      </a>
 
-    <a routerLink="/caja" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Caja
-    </a>
+      <a *ngIf="isAdmin || isCaja"
+         routerLink="/caja-panel" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Caja
+      </a>
 
-    <a routerLink="/mesero" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Mesero
-    </a>
+      <a *ngIf="isAdmin || isMesero"
+         routerLink="/mesero-panel" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Mesero
+      </a>
 
-    <a routerLink="/cocina" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Cocina
-    </a>
+      <a *ngIf="isAdmin || isCocina"
+         routerLink="/cocina-panel" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Cocina
+      </a>
 
-    <a routerLink="/inventario" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Inventario
-    </a>
+      <a *ngIf="isAdmin || isCocina"
+         routerLink="/inventario" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Inventario
+      </a>
 
-    <a routerLink="/admin" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Admin
-    </a>
+      <a *ngIf="isAdmin"
+         routerLink="/admin" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Admin Usuarios
+      </a>
 
-    <a routerLink="/contabilidad" 
-       routerLinkActive="bg-gray-700"
-       class="p-2 rounded hover:bg-gray-700">
-      Contabilidad
-    </a>
+      <a *ngIf="isAdmin"
+         routerLink="/contabilidad" 
+         routerLinkActive="bg-gray-700"
+         class="p-2 rounded hover:bg-gray-700 block transition-colors">
+        Contabilidad
+      </a>
 
-  </nav>
+    </nav>
+  </div>
+
+  <button (click)="logout()" class="w-full text-left p-2 rounded hover:bg-red-600 hover:text-white text-red-300 transition-colors mt-4 border-t border-gray-700 pt-4">
+    Cerrar Sesión
+  </button>
 </aside>
