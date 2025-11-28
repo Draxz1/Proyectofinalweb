@@ -7,6 +7,11 @@ import { BehaviorSubject, timer, forkJoin, Subject, of } from 'rxjs';
 import { switchMap, catchError, takeUntil, tap } from 'rxjs/operators';
 import { ChangeDetectorRef } from '@angular/core';
 
+interface Plato {
+  nombre: string;
+  cantidad: number;
+}
+
 interface Orden {
   id: number;
   mesaId?: number;
@@ -14,6 +19,7 @@ interface Orden {
   total: number;
   fechaCreacion: string | Date;
   estado: string;
+  platos: Plato[];
 }
 
 interface Movimiento {
@@ -36,24 +42,21 @@ interface Movimiento {
 })
 export class CajaPanelComponent implements OnInit, OnDestroy {
 
-  // --- Estado reactivo ---
   private ordenesSubject = new BehaviorSubject<Orden[]>([]);
   ordenes$ = this.ordenesSubject.asObservable();
 
   private movimientosSubject = new BehaviorSubject<Movimiento[]>([]);
   movimientos$ = this.movimientosSubject.asObservable();
 
-  private metodosPagoSubject = new BehaviorSubject<string[]>([]);
+  private metodosPagoSubject = new BehaviorSubject<{ id: number; nombre: string }[]>([]);
   metodosPago$ = this.metodosPagoSubject.asObservable();
 
   private loadingSubject = new BehaviorSubject<boolean>(false);
   loading$ = this.loadingSubject.asObservable();
 
-  // Estado no reactivo/UX
   filtroActual = 'Todos';
   metodoSeleccionadoPorOrden: { [ordenId: number]: string } = {};
 
-  // Compatibilidad para tu template actual
   get ordenesFiltradas() {
     const ordenes = this.ordenesSubject.value || [];
     if (this.filtroActual === 'Todos') return ordenes;
@@ -68,7 +71,6 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     return this.metodosPagoSubject.value || [];
   }
 
-  // Internals
   private destroy$ = new Subject<void>();
   private http = inject(HttpClient);
   private authService = inject(AuthService);
@@ -84,7 +86,6 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.fetchMetodosPago();
 
-    // Polling reactivo para órdenes y movimientos
     timer(0, this.pollIntervalMs).pipe(
       takeUntil(this.destroy$),
       switchMap(() => {
@@ -103,12 +104,9 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
         return forkJoin([o$, m$]);
       }),
       tap(([ordenes, movimientos]) => {
-        if (this._isDifferentOrdenes(this.ordenesSubject.value, ordenes)) {
-          this.ordenesSubject.next(ordenes);
-        }
-        if (this._isDifferentMovimientos(this.movimientosSubject.value, movimientos)) {
-          this.movimientosSubject.next(movimientos);
-        }
+        this.ordenesSubject.next(ordenes);
+        this.movimientosSubject.next(movimientos);
+        this.cdr.markForCheck();
       })
     ).subscribe();
   }
@@ -118,59 +116,99 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  fetchMetodosPago() {
-    this.http.get<any[]>(`${this.apiUrl}/metodos-pago`, this.getHeaders()).pipe(
+  fetchMetordesPago() {
+    // Endpoint sin auth
+    this.http.get<any[]>('http://localhost:5143/api/caja/metodos-pago').pipe(
       takeUntil(this.destroy$),
       catchError(err => {
         console.error('Error obteniendo métodos de pago:', err);
         return of([]);
       }),
       tap(data => {
-        const nombres = (data || []).map(m => (m.Nombre ?? m.nombre ?? m).toString());
-        this.metodosPagoSubject.next(nombres);
+        const metodos = (data || []).map(m => ({
+          id: m.Id ?? m.id,
+          nombre: (m.Nombre ?? m.nombre).toString()
+        }));
+        this.metodosPagoSubject.next(metodos);
+        this.cdr.markForCheck();
       })
     ).subscribe();
   }
 
+  fetchMetodosPago() {
+    this.http.get<any[]>('http://localhost:5143/api/caja/metodos-pago').subscribe({
+      next: (data) => {
+        const metodos = data.map(m => ({
+          id: m.Id ?? m.id,
+          nombre: m.Nombre ?? m.nombre
+        }));
+        this.metodosPagoSubject.next(metodos);
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error métodos de pago:', err)
+    });
+  }
+
   registrarPago(orden: Orden) {
-    const metodo = this.metodoSeleccionadoPorOrden[orden.id] || 'Efectivo';
-    const url = `${this.apiUrl}/ordenes/${orden.id}/pagar`;
+    const metodoNombre = this.metodoSeleccionadoPorOrden[orden.id];
+    if (!metodoNombre) return;
+
+    const metodos = this.metodosPagoSubject.value;
+    const metodo = metodos.find(m => m.nombre === metodoNombre);
+    if (!metodo) {
+      alert('Método de pago no válido');
+      return;
+    }
 
     this.loadingSubject.next(true);
+    const url = `${this.apiUrl}/ordenes/${orden.id}/pagar`;
 
-    this.http.post(url, { metodoPago: metodo }, this.getHeaders()).pipe(
+    this.http.post(url, { metodoPagoId: metodo.id, monto: orden.total }, this.getHeaders()).pipe(
       takeUntil(this.destroy$),
       catchError(err => {
         console.error('Error al registrar el pago', err);
         alert('Error al registrar el pago');
+        this.loadingSubject.next(false);
         return of(null);
       }),
       tap(res => {
         if (res !== null) {
-          const actuales = this.ordenesSubject.value.filter(o => o.id !== orden.id);
-          this.ordenesSubject.next(actuales);
-
-          // Recarga movimientos inmediatamente
-          this.http.get<Movimiento[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
+          // ✅ Refrescar TODO tras el pago
+          const o$ = this.http.get<Orden[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
+            catchError(err => {
+              console.error('Error recargando órdenes:', err);
+              return of([] as Orden[]);
+            })
+          );
+          const m$ = this.http.get<Movimiento[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
             catchError(err => {
               console.error('Error recargando movimientos:', err);
-              return of([]);
-            }),
-            takeUntil(this.destroy$)
-          ).subscribe(movs => this.movimientosSubject.next(movs));
-
-          delete this.metodoSeleccionadoPorOrden[orden.id];
+              return of([] as Movimiento[]);
+            })
+          );
+          forkJoin([o$, m$]).subscribe(([nuevasOrdenes, nuevosMovimientos]) => {
+            this.ordenesSubject.next(nuevasOrdenes);
+            this.movimientosSubject.next(nuevosMovimientos);
+            delete this.metodoSeleccionadoPorOrden[orden.id];
+            this.cdr.markForCheck();
+          });
         }
         this.loadingSubject.next(false);
       })
     ).subscribe();
   }
 
-  // --- Métodos requeridos por template ---
-  setFiltro(filtro: string) { this.filtroActual = filtro; }
+  setFiltro(filtro: string) {
+    this.filtroActual = filtro;
+  }
 
-  trackByOrden(_index: number, item: Orden) { return item.id; }
-  trackByMovimiento(_index: number, item: Movimiento) { return item.id ?? _index; }
+  trackByOrden(_index: number, item: Orden) {
+    return item.id;
+  }
+
+  trackByMovimiento(_index: number, item: Movimiento) {
+    return item.id;
+  }
 
   getCantidadPorEstado(estado: string) {
     const ordenes = this.ordenesSubject.value || [];
@@ -198,37 +236,5 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
       case 'CANCELADO': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800';
     }
-  }
-
-  // --- Helpers privados ---
-  private _isDifferentOrdenes(a: Orden[], b: Orden[]) {
-    if (!a || !b) return true;
-    if (a.length !== b.length) return true;
-    if (a.length === 0) return false;
-    const lastA = a[a.length - 1];
-    const lastB = b[b.length - 1];
-    return lastA.id !== lastB.id || lastA.estado !== lastB.estado || lastA.total !== lastB.total;
-  }
-
-  private _isDifferentMovimientos(a: Movimiento[], b: Movimiento[]) {
-    if (!a || !b) return true;
-    if (a.length !== b.length) return true;
-    if (a.length === 0) return false;
-
-    const lastA = a[a.length - 1];
-    const lastB = b[b.length - 1];
-
-    // Comparamos el nombre del método de pago en lugar de 'metodo'
-    const metodoA = lastA.metodoPago?.nombre ?? '';
-    const metodoB = lastB.metodoPago?.nombre ?? '';
-
-    return lastA.monto !== lastB.monto || lastA.fecha !== lastB.fecha || metodoA !== metodoB;
-  }
-
-  // Dev util: obtiene cantidad por estado desde la fuente reactiva
-  getCantidadPorEstadoDev(estado: string) {
-    const ordenes = this.ordenesSubject.value || [];
-    if (estado === 'Todos') return ordenes.length;
-    return ordenes.filter(o => o.estado === estado).length;
   }
 }
