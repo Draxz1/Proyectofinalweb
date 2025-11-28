@@ -58,14 +58,15 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   metodoSeleccionadoPorOrden: { [ordenId: number]: string } = {};
 
   get ordenesFiltradas() {
-    const ordenes = this.ordenesSubject.value || [];
-    if (this.filtroActual === 'Todos') return ordenes;
-    return ordenes.filter(o => o.estado === this.filtroActual);
-  }
+  const ordenes = this.ordenesSubject.value || [];
+  if (this.filtroActual === 'Todos') return ordenes;
+  return ordenes.filter(o => o.estado === this.filtroActual);
+}
 
-  get movimientos() {
-    return this.movimientosSubject.value || [];
-  }
+get movimientosFiltrados(): Movimiento[] {
+  return this.movimientosSubject.value || [];
+}
+
 
   get metodosPago() {
     return this.metodosPagoSubject.value || [];
@@ -83,33 +84,62 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
     return { headers: new HttpHeaders({ 'Authorization': `Bearer ${token}` }) };
   }
 
-  ngOnInit(): void {
-    this.fetchMetodosPago();
+ ngOnInit(): void {
+  this.fetchMetodosPago();
 
-    timer(0, this.pollIntervalMs).pipe(
-      takeUntil(this.destroy$),
-      switchMap(() => {
-        const o$ = this.http.get<Orden[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
-          catchError(err => {
-            console.error('Error obteniendo órdenes:', err);
-            return of([] as Orden[]);
-          })
-        );
-        const m$ = this.http.get<Movimiento[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
-          catchError(err => {
-            console.error('Error obteniendo movimientos:', err);
-            return of([] as Movimiento[]);
-          })
-        );
-        return forkJoin([o$, m$]);
-      }),
-      tap(([ordenes, movimientos]) => {
-        this.ordenesSubject.next(ordenes);
-        this.movimientosSubject.next(movimientos);
-        this.cdr.markForCheck();
-      })
-    ).subscribe();
-  }
+  timer(0, this.pollIntervalMs).pipe(
+    takeUntil(this.destroy$),
+    switchMap(() => {
+      const o$ = this.http.get<any[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
+        catchError(err => {
+          console.error('Error obteniendo órdenes:', err);
+          return of([] as any[]);
+        })
+      );
+      const m$ = this.http.get<any[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
+        catchError(err => {
+          console.error('Error obteniendo movimientos:', err);
+          return of([] as any[]);
+        })
+      );
+      return forkJoin([o$, m$]);
+    }),
+    tap(([ordenesRaw, movimientosRaw]) => {
+      // Normalizar Órdenes (backend puede devolver PascalCase)
+      const ordenes = (ordenesRaw || []).map(o => ({
+        id: o.id ?? o.Id,
+        mesaId: o.mesaId ?? o.MesaId,
+        meseroNombre: o.meseroNombre ?? o.MeseroNombre ?? (o.usuario ? (o.usuario.nombre ?? o.usuario.Nombre) : undefined),
+        total: o.total ?? o.Total ?? o.TotalOrden,
+        fechaCreacion: o.fechaCreacion ?? o.FechaCreacion ?? o.fecha,
+        estado: o.estado ?? o.Estado
+      })) as Orden[];
+
+      // Normalizar Movimientos (backend puede devolver PascalCase)
+      const movimientos = (movimientosRaw || []).map(m => ({
+        id: m.id ?? m.Id,
+        monto: m.monto ?? m.Monto,
+        tipo: m.tipo ?? m.Tipo,
+        fecha: m.fecha ?? m.Fecha ?? m.fechaPago ?? m.FechaPago,
+        usuario: {
+          nombre: (m.usuario && (m.usuario.nombre ?? m.usuario.Nombre)) ?? (m.usuarioNombre ?? m.UsuarioNombre) ?? null
+        },
+        metodoPago: {
+          nombre: (m.metodoPago && (m.metodoPago.nombre ?? m.metodoPago.Nombre)) ?? (m.metodoPagoNombre ?? null)
+        },
+        descripcion: m.descripcion ?? m.Descripcion,
+      })) as Movimiento[];
+
+      // Push al Subject
+      this.ordenesSubject.next(ordenes);
+      this.movimientosSubject.next(movimientos);
+      this.cdr.markForCheck();
+    })
+  ).subscribe({
+    error: err => console.error('Error en polling caja:', err)
+  });
+}
+
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -199,8 +229,9 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   }
 
   setFiltro(filtro: string) {
-    this.filtroActual = filtro;
-  }
+  this.filtroActual = filtro;
+  this.cdr.markForCheck(); // Forzar actualización de la vista
+}
 
   trackByOrden(_index: number, item: Orden) {
     return item.id;
