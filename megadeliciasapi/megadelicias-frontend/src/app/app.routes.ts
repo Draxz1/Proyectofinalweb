@@ -2,50 +2,57 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login';
 import { AppLayoutComponent } from './components/app-layout/app-layout';
 
-// 1. IMPORTAMOS TODOS LOS COMPONENTES (Asegúrate que estas rutas sean reales)
+// 1. IMPORTAR PAGINAS PÚBLICAS FALTANTES
+import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password';
+import { ChangePasswordComponent } from './pages/change-password/change-password';
+
+// 2. IMPORTAR PAGINAS INTERNAS
 import { DashboardComponent } from './pages/dashboard/dashboard';
 import { MeseroPanelComponent } from './pages/mesero-panel/mesero-panel';
 import { CocinaPanelComponent } from './pages/cocina-panel/cocina-panel';
 import { CajaPanelComponent } from './pages/caja-panel/caja-panel';
 import { InventarioPanelComponent } from './pages/inventario-panel/inventario-panel';
 import { AdminUsersComponent } from './pages/admin-users/admin-users';
-
-// 👇👇 AQUÍ ESTABA EL FALTANTE 👇👇
-import { ContabilidadComponent } from './pages/contabilidad/contabilidad'; 
-// (Si te marca error aquí, verifica que la carpeta se llame 'contabilidad' y el archivo 'contabilidad.ts')
+import { ContabilidadComponent } from './pages/contabilidad/contabilidad';
 
 // Guards
 import { authGuard } from './guards/auth-guard';
 import { roleGuard } from './guards/role.guard';
 
 export const routes: Routes = [
-  // 1. Login (Pantalla Completa)
+  
+  // ==========================================
+  // ZONA PÚBLICA (Sin Sidebar ni Topbar)
+  // ==========================================
   { path: 'login', component: LoginComponent },
+  
+  // 👇 AQUÍ ESTABAN FALTANDO ESTAS RUTAS 👇
+  { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'change-password', component: ChangePasswordComponent },
 
-  // 2. App Principal (Con Sidebar y Topbar)
+
+  // ==========================================
+  // ZONA PRIVADA (Con Sidebar y Topbar)
+  // ==========================================
   {
     path: '',
     component: AppLayoutComponent,
-    canActivate: [authGuard], // Verifica que haya sesión
+    canActivate: [authGuard], // Candado general de sesión
     children: [
       
-      // --- DASHBOARD ---
+      // ADMIN
       { 
         path: 'dashboard', 
         component: DashboardComponent, 
         canActivate: [roleGuard], 
         data: { roles: ['admin'] } 
       },
-
-      // --- CONTABILIDAD (NUEVO) ---
       { 
         path: 'contabilidad', 
         component: ContabilidadComponent, 
         canActivate: [roleGuard], 
         data: { roles: ['admin'] } 
       },
-
-      // --- ADMIN USUARIOS ---
       { 
         path: 'admin', 
         component: AdminUsersComponent, 
@@ -53,7 +60,7 @@ export const routes: Routes = [
         data: { roles: ['admin'] } 
       },
 
-      // --- MESERO ---
+      // MESERO
       { 
         path: 'mesero-panel', 
         component: MeseroPanelComponent, 
@@ -61,15 +68,13 @@ export const routes: Routes = [
         data: { roles: ['mesero'] } 
       },
 
-      // --- COCINA ---
+      // COCINA
       { 
         path: 'cocina-panel', 
         component: CocinaPanelComponent, 
         canActivate: [roleGuard], 
         data: { roles: ['cocinero', 'cocina'] } 
       },
-      
-      // --- INVENTARIO ---
       { 
         path: 'inventario', 
         component: InventarioPanelComponent, 
@@ -77,7 +82,7 @@ export const routes: Routes = [
         data: { roles: ['cocinero', 'cocina'] } 
       },
 
-      // --- CAJA ---
+      // CAJA
       { 
         path: 'caja-panel', 
         component: CajaPanelComponent, 
@@ -85,11 +90,11 @@ export const routes: Routes = [
         data: { roles: ['cajero', 'caja'] } 
       },
 
-      // Redirección por defecto
+      // Redirección por defecto si entra a la raíz vacía
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   },
 
-  // Ruta comodín (Cualquier cosa rara va al login)
+  // Ruta comodín (Error 404 -> Login)
   { path: '**', redirectTo: 'login' }
 ];
