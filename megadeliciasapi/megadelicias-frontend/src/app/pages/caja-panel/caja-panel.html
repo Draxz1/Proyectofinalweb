@@ -7,102 +7,142 @@
 
   <!-- Filtros -->
   <div class="flex flex-wrap gap-2 mb-8 bg-white p-2 rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
-    <button *ngFor="let f of ['Todos','PENDIENTE','EN_PROCESO','LISTO','ENTREGADO','CANCELADO']"
-            (click)="setFiltro(f)"
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
-            [ngClass]="filtroActual === f ? 'bg-gray-900 text-white shadow-md' :
-                        (f==='PENDIENTE'?'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600':
-                         f==='EN_PROCESO'?'text-gray-500 hover:bg-blue-50 hover:text-blue-600':
-                         f==='LISTO'?'text-gray-500 hover:bg-green-50 hover:text-green-600':
-                         f==='ENTREGADO'?'text-gray-500 hover:bg-gray-100':'text-gray-500 hover:bg-red-50 hover:text-red-600')">
+    <button
+      *ngFor="let f of ['Todos','PENDIENTE','EN_PROCESO','LISTO','ENTREGADO','CANCELADO']"
+      (click)="setFiltro(f)"
+      class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+      [ngClass]="
+        filtroActual === f
+          ? 'bg-gray-900 text-white shadow-md'
+          : f === 'PENDIENTE'
+            ? 'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600'
+            : f === 'EN_PROCESO'
+              ? 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+              : f === 'LISTO'
+                ? 'text-gray-500 hover:bg-green-50 hover:text-green-600'
+                : f === 'ENTREGADO'
+                  ? 'text-gray-500 hover:bg-gray-100'
+                  : 'text-gray-500 hover:bg-red-50 hover:text-red-600'
+      "
+    >
       {{ f }}
-      <span class="ml-1 px-1.5 rounded text-xs bg-white/20">{{ getCantidadPorEstado(f) }}</span>
+      <span class="ml-1 px-1.5 rounded text-xs bg-white/20">
+        {{ getCantidadPorEstado(f) }}
+      </span>
     </button>
   </div>
 
-  <!-- Órdenes - CORREGIDO: usar ordenesFiltradas -->
+  <!-- Órdenes -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    <div *ngFor="let orden of ordenesFiltradas; trackBy: trackByOrden"
-         class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-200 flex flex-col overflow-hidden"
-         [ngClass]="getColorEstado(orden.estado)">
+    <ng-container *ngIf="ordenesFiltradas.length > 0; else noOrdenes">
+      <div
+        *ngFor="let orden of ordenesFiltradas; trackBy: trackByOrden"
+        class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-200 flex flex-col overflow-hidden"
+        [ngClass]="getColorEstado(orden.estado)"
+      >
+        <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-start">
+          <div>
+            <h2 class="text-xl font-extrabold text-gray-800 tracking-tight">#{{ orden.id }}</h2>
+            <div class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
+              {{ orden.fechaCreacion | date:'shortTime' }}
+              <span class="text-gray-300">|</span> Mesa {{ orden.mesaId }} - {{ orden.meseroNombre }}
+            </div>
+          </div>
+          <span
+            class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border shadow-sm"
+            [ngClass]="getBadgeColor(orden.estado)"
+          >
+            {{ orden.estado || 'SIN ESTADO' }}
+          </span>
+        </div>
 
-      <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-start">
-        <div>
-          <h2 class="text-xl font-extrabold text-gray-800 tracking-tight">#{{ orden.id }}</h2>
-          <div class="text-xs text-gray-500 font-medium flex items-center gap-1 mt-1">
-            {{ orden.fechaCreacion | date:'shortTime' }}
-            <span class="text-gray-300">|</span> Mesa {{ orden.mesaId }} - {{ orden.meseroNombre }}
+        <div class="p-5 flex-1 bg-white/40">
+          <div class="text-lg font-bold text-gray-800">Total: L. {{ orden.total }}</div>
+          <!-- Mostrar platos si están disponibles -->
+          <div *ngIf="orden.platos && orden.platos.length > 0" class="mt-2">
+            <div class="text-sm font-medium text-gray-700 mb-1">Platos:</div>
+            <div *ngFor="let plato of orden.platos" class="text-sm text-gray-600">
+              {{ plato.cantidad }}x {{ plato.nombre }}
+            </div>
           </div>
         </div>
-        <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border shadow-sm"
-              [ngClass]="getBadgeColor(orden.estado)">
-          {{ orden.estado || 'SIN ESTADO' }}
-        </span>
-      </div>
 
-      <div class="p-5 flex-1 bg-white/40">
-        <div class="text-lg font-bold text-gray-800">Total: L. {{ orden.total }}</div>
-        <!-- Mostrar platos si están disponibles -->
-        <div *ngIf="orden.platos && orden.platos.length > 0" class="mt-2">
-          <div class="text-sm font-medium text-gray-700 mb-1">Platos:</div>
-          <div *ngFor="let plato of orden.platos" class="text-sm text-gray-600">
-            {{ plato.cantidad }}x {{ plato.nombre }}
-          </div>
+        <div *ngIf="orden.estado && orden.estado !== 'CANCELADO'" class="p-4 bg-white border-t border-gray-100 grid gap-3">
+          <select
+            [(ngModel)]="metodoSeleccionadoPorOrden[orden.id]"
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+            required
+          >
+            <option value="" disabled>Selecciona método de pago</option>
+            <option *ngFor="let metodo of metodosPago" [value]="metodo.nombre">
+              {{ metodo.nombre }}
+            </option>
+          </select>
+          <button
+            (click)="registrarPago(orden)"
+            class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
+            [disabled]="!metodoSeleccionadoPorOrden[orden.id]"
+          >
+            Registrar Pago
+          </button>
+        </div>
+
+        <div *ngIf="orden.estado === 'CANCELADO'" class="p-4 bg-white border-t border-gray-100">
+          <span class="text-xs text-red-600 font-medium">Orden cancelada</span>
         </div>
       </div>
+    </ng-container>
 
-      <div *ngIf="orden.estado && orden.estado !== 'CANCELADO'" class="p-4 bg-white border-t border-gray-100 grid gap-3">
-        <select 
-          [(ngModel)]="metodoSeleccionadoPorOrden[orden.id]" 
-          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
-          required>
-          <option value="" disabled>Selecciona método de pago</option>
-          <option *ngFor="let metodo of metodosPago" [value]="metodo.nombre">
-            {{ metodo.nombre }}
-          </option>
-        </select>
-        <button (click)="registrarPago(orden)"
-                class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
-                [disabled]="!metodoSeleccionadoPorOrden[orden.id]">
-          Registrar Pago
-        </button>
+    <ng-template #noOrdenes>
+      <div class="col-span-full py-20 text-center text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
+        <p>No hay órdenes en {{ filtroActual }}</p>
       </div>
-
-      <div *ngIf="orden.estado === 'CANCELADO'" class="p-4 bg-white border-t border-gray-100">
-        <span class="text-xs text-red-600 font-medium">Orden cancelada</span>
-      </div>
-    </div>
-
-    <div *ngIf="ordenesFiltradas.length === 0" class="col-span-full py-20 text-center text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
-      <div class="mb-2"></div>
-      <p>No hay órdenes en {{ filtroActual }}</p>
-    </div>
+    </ng-template>
   </div>
 
-  <!-- Movimientos - CORREGIDO: usar movimientosFiltrados -->
+  <!-- Movimientos -->
   <div class="mt-10">
     <h2 class="text-2xl font-bold mb-4">Movimientos de Caja</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      <div *ngFor="let mov of movimientosFiltrados; trackBy: trackByMovimiento"
-           class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-2">
-        <div class="flex justify-between items-start">
-          <div class="text-lg font-bold" [ngClass]="mov.tipo === 'INGRESO' ? 'text-green-600' : 'text-red-600'">
-            {{ mov.tipo === 'INGRESO' ? '+' : '-' }} L. {{ mov.monto }}
+      <ng-container *ngIf="movimientosFiltrados.length > 0; else noMovimientos">
+        <div
+          *ngFor="let mov of movimientosFiltrados; trackBy: trackByMovimiento"
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col gap-2"
+        >
+          <div class="flex justify-between items-start">
+            <div
+              class="text-lg font-bold"
+              [ngClass]="mov.tipo === 'INGRESO' ? 'text-green-600' : 'text-red-600'"
+            >
+              {{ mov.tipo === 'INGRESO' ? '+' : '-' }} L. {{ mov.monto }}
+            </div>
+            <span
+              class="px-2 py-1 text-xs rounded-full"
+              [ngClass]="mov.tipo === 'INGRESO' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+            >
+              {{ mov.tipo }}
+            </span>
           </div>
-          <span class="px-2 py-1 text-xs rounded-full" 
-                [ngClass]="mov.tipo === 'INGRESO' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
-            {{ mov.tipo }}
-          </span>
+          <div class="text-sm text-gray-600">
+            {{ mov.descripcion || 'Movimiento de caja' }}
+          </div>
+          <div class="text-sm text-gray-500">
+            Método: {{ mov.metodoPago?.nombre || 'No especificado' }}
+          </div>
+          <div class="text-sm text-gray-500">
+            Usuario: {{ mov.usuario?.nombre || '—' }}
+          </div>
+          <div class="text-xs text-gray-400 mt-1">
+            {{ mov.fecha | date:'medium' }}
+          </div>
         </div>
-        <div class="text-sm text-gray-600">{{ mov.descripcion || 'Movimiento de caja' }}</div>
-        <div class="text-sm text-gray-500">Método: {{ mov.metodoPago?.nombre || 'No especificado' }}</div>
-        <div class="text-sm text-gray-500">Usuario: {{ mov.usuario?.nombre || '—' }}</div>
-        <div class="text-xs text-gray-400 mt-1">{{ mov.fecha | date:'medium' }}</div>
-      </div>
+      </ng-container>
 
-      <div *ngIf="movimientosFiltrados.length === 0" class="col-span-full text-center text-gray-400 py-10 bg-white rounded-xl border-2 border-dashed border-gray-200">
-        <p>No hay movimientos registrados</p>
-      </div>
+      <ng-template #noMovimientos>
+        <div class="col-span-full text-center text-gray-400 py-10 bg-white rounded-xl border-2 border-dashed border-gray-200">
+          <p>No hay movimientos registrados</p>
+        </div>
+      </ng-template>
     </div>
   </div>
 </div>
