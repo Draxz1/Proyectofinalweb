@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -14,6 +14,8 @@ interface InventarioItem {
   activo: boolean;
   creadoEn: string;
   categoriaId: number;
+  categoria?: string;
+  valorTotal?: number;
 }
 
 interface Categoria {
@@ -47,40 +49,103 @@ export class InventarioPanelComponent implements OnInit {
   filtro: string = "";
   cargando: boolean = false;
 
-  nuevoMovimiento: Movimiento = { itemId: 0, tipo: 'Entrada', cantidad: 1, costoUnitario: 0, motivo: '' };
-  itemSeleccionado: InventarioItem | null = null;
-  nuevoProducto: Partial<InventarioItem> & { categoriaId: number, unidadMedida: string, stockMinimo: number } = {
-    codigo: '', nombre: '', categoriaId: 0, unidadMedida: 'Unidad', stockMinimo: 0
+  nuevoMovimiento: Movimiento = { 
+    itemId: 0, 
+    tipo: 'Entrada', 
+    cantidad: 1, 
+    costoUnitario: 0, 
+    motivo: '' 
   };
+  
+  itemSeleccionado: InventarioItem | null = null;
+  
+  nuevoProducto: Partial<InventarioItem> & { 
+    categoriaId: number, 
+    unidadMedida: string, 
+    stockMinimo: number 
+  } = {
+    codigo: '', 
+    nombre: '', 
+    categoriaId: 0, 
+    unidadMedida: 'Unidad', 
+    stockMinimo: 0
+  };
+  
   mostrarModal = false;
 
-  apiUrl = "https://localhost:7013/api/Inventario";
+  // ✅ URL CORREGIDA - Usa el mismo puerto que cocina
+  apiUrl = "http://localhost:5143/api/Inventario";
 
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
+    console.log('🔍 Inicializando Inventario Panel...');
+    console.log('📡 API URL:', this.apiUrl);
     this.cargarInventario();
     this.cargarCategorias();
     this.cargarMovimientosRecientes();
   }
 
+  // ✅ Método mejorado con logs de depuración
   cargarInventario() {
     this.cargando = true;
+    console.log('📦 Cargando inventario desde:', this.apiUrl);
+    
     this.http.get<InventarioItem[]>(this.apiUrl)
       .subscribe({
-        next: data => { this.inventario = data; this.cargando = false; },
-        error: err => { console.error(err); this.cargando = false; }
+        next: (data) => {
+          console.log('✅ Inventario cargado:', data);
+          this.inventario = data;
+          this.cargando = false;
+        },
+        error: (err) => {
+          console.error('❌ Error cargando inventario:', err);
+          console.error('📄 Detalles del error:', {
+            status: err.status,
+            statusText: err.statusText,
+            message: err.message,
+            url: err.url
+          });
+          this.cargando = false;
+          
+          // Mensaje de error al usuario
+          if (err.status === 0) {
+            alert('❌ Error de conexión: No se pudo conectar con el servidor.\n\nVerifica que el backend esté corriendo en: http://localhost:5143');
+          } else if (err.status === 401) {
+            alert('❌ No autorizado: Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+          } else {
+            alert(`❌ Error al cargar inventario: ${err.message}`);
+          }
+        }
       });
   }
 
   cargarCategorias() {
+    console.log('📂 Cargando categorías...');
     this.http.get<Categoria[]>(this.apiUrl + '/categorias')
-      .subscribe({ next: data => this.categorias = data, error: err => console.error(err) });
+      .subscribe({ 
+        next: (data) => {
+          console.log('✅ Categorías cargadas:', data);
+          this.categorias = data;
+        },
+        error: (err) => {
+          console.error('❌ Error cargando categorías:', err);
+        }
+      });
   }
 
   cargarMovimientosRecientes() {
-    this.http.get<Movimiento[]>(this.apiUrl + '/movimientos-recientes')
-      .subscribe({ next: data => this.movimientosRecientes = data, error: err => console.error(err) });
+    console.log('📋 Cargando movimientos recientes...');
+    this.http.get<Movimiento[]>(this.apiUrl + '/movimientos')
+      .subscribe({ 
+        next: (data) => {
+          console.log('✅ Movimientos cargados:', data);
+          this.movimientosRecientes = data;
+        },
+        error: (err) => {
+          console.error('❌ Error cargando movimientos:', err);
+        }
+      });
   }
 
   get inventarioFiltrado() {
@@ -97,60 +162,102 @@ export class InventarioPanelComponent implements OnInit {
       categoria: this.getNombreCategoria(item.categoriaId)
     }));
   }
+
   getCategoriaSeleccionado(): string {
-  if (!this.itemSeleccionado) return '';
-  const cat = this.categorias.find(c => c.id === this.itemSeleccionado!.categoriaId);
-  return cat ? cat.nombre : 'Sin categoría';
-}
+    if (!this.itemSeleccionado) return '';
+    const cat = this.categorias.find(c => c.id === this.itemSeleccionado!.categoriaId);
+    return cat ? cat.nombre : 'Sin categoría';
+  }
 
   getNombreCategoria(id: number) {
     const cat = this.categorias.find(c => c.id === id);
     return cat ? cat.nombre : 'Sin categoría';
   }
 
-  editarItem(item: InventarioItem) { alert('Editar: ' + item.nombre); }
+  editarItem(item: InventarioItem) { 
+    alert('Editar: ' + item.nombre); 
+  }
 
   eliminarItem(id: number) {
     if (!confirm('¿Seguro que deseas eliminar este producto?')) return;
     this.http.delete(`${this.apiUrl}/${id}`).subscribe({
-      next: () => { alert('Producto eliminado'); this.cargarInventario(); },
-      error: err => { console.error(err); alert('No se pudo eliminar el producto.'); }
+      next: () => { 
+        alert('Producto eliminado'); 
+        this.cargarInventario(); 
+      },
+      error: (err) => { 
+        console.error(err); 
+        alert('No se pudo eliminar el producto.'); 
+      }
     });
   }
 
   onProductoSeleccionado() {
     this.itemSeleccionado = this.inventario.find(i => i.id === this.nuevoMovimiento.itemId) || null;
+    console.log('🎯 Producto seleccionado:', this.itemSeleccionado);
   }
 
-  abrirModalCrear() { this.mostrarModal = true; }
-  cerrarModal() { this.mostrarModal = false; }
+  abrirModalCrear() { 
+    this.mostrarModal = true; 
+  }
+
+  cerrarModal() { 
+    this.mostrarModal = false; 
+  }
 
   guardarMovimiento() {
-    if (!this.nuevoMovimiento.itemId) { alert('Selecciona un producto'); return; }
-    const item = this.inventario.find(i => i.id === this.nuevoMovimiento.itemId);
-    if (!item) return;
-
-    // Ajustar stock
-    if (this.nuevoMovimiento.tipo === 'Entrada') {
-      item.stockActual += this.nuevoMovimiento.cantidad;
-      item.costoUnitario = this.nuevoMovimiento.costoUnitario || item.costoUnitario;
-    } else {
-      item.stockActual -= this.nuevoMovimiento.cantidad;
+    if (!this.nuevoMovimiento.itemId) { 
+      alert('Selecciona un producto'); 
+      return; 
     }
-
-    // Guardar movimiento
+    
+    console.log('💾 Guardando movimiento:', this.nuevoMovimiento);
+    
     this.http.post(this.apiUrl + '/movimiento', this.nuevoMovimiento)
       .subscribe({
-        next: () => { this.cargarMovimientosRecientes(); this.nuevoMovimiento = { itemId: 0, tipo: 'Entrada', cantidad: 1, costoUnitario: 0, motivo: '' }; this.itemSeleccionado = null; },
-        error: err => console.error(err)
+        next: () => { 
+          console.log('✅ Movimiento guardado');
+          this.cargarInventario();
+          this.cargarMovimientosRecientes(); 
+          this.nuevoMovimiento = { 
+            itemId: 0, 
+            tipo: 'Entrada', 
+            cantidad: 1, 
+            costoUnitario: 0, 
+            motivo: '' 
+          }; 
+          this.itemSeleccionado = null;
+          alert('✅ Movimiento registrado correctamente');
+        },
+        error: (err) => {
+          console.error('❌ Error guardando movimiento:', err);
+          alert('❌ Error al guardar el movimiento');
+        }
       });
   }
 
   guardarNuevoProducto() {
+    console.log('💾 Guardando nuevo producto:', this.nuevoProducto);
+    
     this.http.post(this.apiUrl, this.nuevoProducto)
       .subscribe({
-        next: () => { this.cargarInventario(); this.cerrarModal(); this.nuevoProducto = { codigo:'', nombre:'', categoriaId:0, unidadMedida:'Unidad', stockMinimo:0 }; },
-        error: err => console.error(err)
+        next: () => { 
+          console.log('✅ Producto creado');
+          this.cargarInventario(); 
+          this.cerrarModal(); 
+          this.nuevoProducto = { 
+            codigo:'', 
+            nombre:'', 
+            categoriaId:0, 
+            unidadMedida:'Unidad', 
+            stockMinimo:0 
+          };
+          alert('✅ Producto creado correctamente');
+        },
+        error: (err) => {
+          console.error('❌ Error creando producto:', err);
+          alert('❌ Error al crear el producto');
+        }
       });
   }
 }

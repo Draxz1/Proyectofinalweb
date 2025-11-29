@@ -3,7 +3,7 @@ using megadeliciasapi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using megadeliciasapi.DTOs;
 namespace megadeliciasapi.Controllers
 {
     [Route("api/[controller]")] // La ruta será /api/Plato
@@ -109,6 +109,36 @@ namespace megadeliciasapi.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        [HttpPost("{id}/ingredientes")]
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> AgregarIngredientes(int id, [FromBody] List<AgregarIngredienteDto> ingredientes)
+        {
+            var plato = await _context.Platos.FindAsync(id);
+            if (plato == null) return NotFound(new { message = "Plato no encontrado" });
+
+            foreach (var ing in ingredientes)
+            {
+                var itemExiste = await _context.InventarioItems.AnyAsync(i => i.Id == ing.ItemId);
+                if (!itemExiste) return BadRequest(new { message = $"El ingrediente {ing.ItemId} no existe" });
+
+                var yaExiste = await _context.PlatoIngredientes
+                    .AnyAsync(pi => pi.PlatoId == id && pi.ItemId == ing.ItemId);
+
+                if (yaExiste) continue;
+
+                _context.PlatoIngredientes.Add(new PlatoIngrediente
+                {
+                    PlatoId = id,
+                    ItemId = ing.ItemId,
+                    CantidadUsada = ing.Cantidad,
+                    UnidadMedida = ing.UnidadMedida
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Ingredientes agregados correctamente" });
         }
     }
 }
