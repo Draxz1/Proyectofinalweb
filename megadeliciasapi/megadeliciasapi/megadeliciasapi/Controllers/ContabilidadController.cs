@@ -350,5 +350,165 @@ public async Task<ActionResult<IngresosGastosDto>> GetResumenIngresosGastos(
 
             return Ok(dto);
         }
+
+       // ==========================
+// 6. LIBRO DIARIO
+// ==========================
+// GET: api/Contabilidad/libro-diario?desde=2025-11-01&hasta=2025-11-30
+// Si no se envían fechas, toma solo el día de hoy.
+[HttpGet("libro-diario")]
+public async Task<ActionResult<LibroDiarioDto>> GetLibroDiario(
+    [FromQuery] DateTime? desde,
+    [FromQuery] DateTime? hasta)
+{
+    var fechaDesde = (desde ?? DateTime.Today).Date;
+    var fechaHasta = (hasta ?? DateTime.Today).Date;
+
+    var inicio = fechaDesde;
+    var fin = fechaHasta.AddDays(1).AddTicks(-1);
+
+    var movimientos = await _context.MovimientosCaja
+        .Where(m => m.Fecha >= inicio && m.Fecha <= fin)
+        .OrderBy(m => m.Fecha)
+        .ToListAsync();
+
+    var lista = movimientos.Select(m => new LibroDiarioMovimientoDto
+    {
+        Fecha = m.Fecha,
+        Tipo = m.Tipo,
+        Monto = m.Monto
+    }).ToList();
+
+    // cargos = egresos, abonos = ingresos
+    decimal totalCargos = movimientos
+        .Where(m => m.Tipo == "EGRESO")
+        .Sum(m => m.Monto);
+
+    decimal totalAbonos = movimientos
+        .Where(m => m.Tipo == "INGRESO")
+        .Sum(m => m.Monto);
+
+    var dto = new LibroDiarioDto
+    {
+        Desde = fechaDesde.ToString("yyyy-MM-dd"),
+        Hasta = fechaHasta.ToString("yyyy-MM-dd"),
+        Movimientos = lista,
+        TotalCargos = totalCargos,
+        TotalAbonos = totalAbonos
+    };
+
+    return Ok(dto);
+}
+
+// ==========================
+// 7. MAYOR (Cuenta Caja)
+// ==========================
+// GET: api/Contabilidad/mayor?desde=2025-11-01&hasta=2025-11-30
+[HttpGet("mayor")]
+public async Task<ActionResult<MayorCuentaDto>> GetMayorCaja(
+    [FromQuery] DateTime? desde,
+    [FromQuery] DateTime? hasta)
+{
+    var fechaDesde = (desde ?? DateTime.Today).Date;
+    var fechaHasta = (hasta ?? DateTime.Today).Date;
+
+    var inicio = fechaDesde;
+    var fin = fechaHasta.AddDays(1).AddTicks(-1);
+
+    var movimientos = await _context.MovimientosCaja
+        .Where(m => m.Fecha >= inicio && m.Fecha <= fin)
+        .OrderBy(m => m.Fecha)
+        .ToListAsync();
+
+    decimal saldo = 0m;
+    var lista = new List<MayorMovimientoDto>();
+
+    foreach (var m in movimientos)
+    {
+        decimal cargo = 0m;
+        decimal abono = 0m;
+
+        if (m.Tipo == "EGRESO")
+        {
+            cargo = m.Monto;
+            saldo -= m.Monto; // salida de caja
+        }
+        else if (m.Tipo == "INGRESO")
+        {
+            abono = m.Monto;
+            saldo += m.Monto; // entrada de caja
+        }
+
+        lista.Add(new MayorMovimientoDto
+        {
+            Fecha = m.Fecha,
+            Tipo = m.Tipo,
+            Cargo = cargo,
+            Abono = abono,
+            Saldo = saldo
+        });
+    }
+
+    var dto = new MayorCuentaDto
+    {
+        Cuenta = "Caja",
+        Movimientos = lista,
+        TotalCargos = lista.Sum(x => x.Cargo),
+        TotalAbonos = lista.Sum(x => x.Abono),
+        SaldoFinal = saldo
+    };
+
+    return Ok(dto);
+}
+
+// ==========================
+// 8. BALANZA DE COMPROBACIÓN
+// ==========================
+// GET: api/Contabilidad/balanza-comprobacion?desde=2025-11-01&hasta=2025-11-30
+[HttpGet("balanza-comprobacion")]
+public async Task<ActionResult<BalanzaComprobacionDto>> GetBalanzaComprobacion(
+    [FromQuery] DateTime? desde,
+    [FromQuery] DateTime? hasta)
+{
+    var fechaDesde = (desde ?? DateTime.Today).Date;
+    var fechaHasta = (hasta ?? DateTime.Today).Date;
+
+    var inicio = fechaDesde;
+    var fin = fechaHasta.AddDays(1).AddTicks(-1);
+
+    var movimientos = await _context.MovimientosCaja
+        .Where(m => m.Fecha >= inicio && m.Fecha <= fin)
+        .ToListAsync();
+
+    // Para este proyecto solo tenemos la cuenta "Caja"
+    decimal totalCargosCaja = movimientos
+        .Where(m => m.Tipo == "EGRESO")
+        .Sum(m => m.Monto);
+
+    decimal totalAbonosCaja = movimientos
+        .Where(m => m.Tipo == "INGRESO")
+        .Sum(m => m.Monto);
+
+    var cuentaCaja = new BalanzaComprobacionCuentaDto
+    {
+        Cuenta = "Caja",
+        TotalCargos = totalCargosCaja,
+        TotalAbonos = totalAbonosCaja
+    };
+
+    var dto = new BalanzaComprobacionDto
+    {
+        Desde = fechaDesde.ToString("yyyy-MM-dd"),
+        Hasta = fechaHasta.ToString("yyyy-MM-dd"),
+        Cuentas = new List<BalanzaComprobacionCuentaDto> { cuentaCaja },
+        TotalCargos = totalCargosCaja,
+        TotalAbonos = totalAbonosCaja,
+        Cuadra = totalCargosCaja == totalAbonosCaja
+    };
+
+    return Ok(dto);
+}
+
+
     }
 }
