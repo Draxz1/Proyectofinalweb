@@ -38,7 +38,10 @@ namespace megadeliciasapi.Controllers
                 return Forbid("Solo los administradores pueden ver la lista de usuarios.");
             }
 
+            // Optimizado: Proyección directa sin tracking para mejor rendimiento
             var usuarios = await _context.Usuarios
+                .AsNoTracking()
+                .OrderBy(u => u.Nombre)
                 .Select(u => new UsuarioDto
                 {
                     Id = u.Id,
@@ -62,22 +65,25 @@ namespace megadeliciasapi.Controllers
                 return Forbid("Solo los administradores pueden ver usuarios.");
             }
 
-            var usuario = await _context.Usuarios.FindAsync(id);
+            // Optimizado: Proyección directa sin tracking
+            var usuarioDto = await _context.Usuarios
+                .AsNoTracking()
+                .Where(u => u.Id == id)
+                .Select(u => new UsuarioDto
+                {
+                    Id = u.Id,
+                    Nombre = u.Nombre,
+                    Correo = u.Correo,
+                    Rol = u.Rol,
+                    CreadoEn = u.CreadoEn,
+                    RequiereCambioPassword = u.RequiereCambioPassword
+                })
+                .FirstOrDefaultAsync();
 
-            if (usuario == null)
+            if (usuarioDto == null)
             {
                 return NotFound(new { message = "Usuario no encontrado." });
             }
-
-            var usuarioDto = new UsuarioDto
-            {
-                Id = usuario.Id,
-                Nombre = usuario.Nombre,
-                Correo = usuario.Correo,
-                Rol = usuario.Rol,
-                CreadoEn = usuario.CreadoEn,
-                RequiereCambioPassword = usuario.RequiereCambioPassword
-            };
 
             return Ok(usuarioDto);
         }
