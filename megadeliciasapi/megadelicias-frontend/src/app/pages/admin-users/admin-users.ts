@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
-import { LucideAngularModule } from 'lucide-angular';
 
 interface Usuario {
   id: number;
@@ -17,7 +16,7 @@ interface Usuario {
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './admin-users.html',
   styleUrl: './admin-users.css'
 })
@@ -76,24 +75,28 @@ export class AdminUsersComponent implements OnInit {
     this.loading = true;
     this.error = '';
     
+    // Optimizado: Carga rápida con manejo de errores mejorado
     this.http.get<Usuario[]>(this.apiUrl, this.getHeaders()).subscribe({
       next: (data) => {
-        this.usuarios = data;
+        this.usuarios = data || [];
         this.aplicarFiltros();
         this.loading = false;
       },
       error: (err) => {
         this.error = err.error?.message || 'Error al cargar usuarios';
         this.loading = false;
+        this.usuarios = [];
+        this.usuariosFiltrados = [];
         console.error('Error:', err);
       }
     });
   }
 
   aplicarFiltros() {
-    let filtrados = [...this.usuarios];
+    // Optimizado: Filtrado más eficiente
+    let filtrados = this.usuarios;
     
-    // Filtro por texto
+    // Filtro por texto (optimizado)
     if (this.buscarTexto.trim()) {
       const texto = this.buscarTexto.toLowerCase();
       filtrados = filtrados.filter(u => 
