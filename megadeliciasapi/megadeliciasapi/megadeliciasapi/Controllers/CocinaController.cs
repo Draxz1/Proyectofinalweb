@@ -19,12 +19,9 @@ namespace megadeliciasapi.Controllers
             _context = context;
         }
 
-        // GET: api/cocina
-        // Obtiene el "Tablero" de cocina con TODOS los estados del día actual
         [HttpGet]
         public async Task<IActionResult> GetTableroCocina()
         {
-            // CAMBIO: Ahora incluimos TODOS los estados
             var estadosActivos = new[] { "PENDIENTE", "EN_PROCESO", "LISTO", "ENTREGADO", "CANCELADO" };
 
             // Solo mostramos órdenes del día actual para no saturar la vista
@@ -35,8 +32,7 @@ namespace megadeliciasapi.Controllers
                 .Include(o => o.Estado) 
                 .Include(o => o.Detalles)
                     .ThenInclude(d => d.Plato)
-                .Include(o => o.Usuario) // NUEVO: Para obtener nombre del mesero
-                // Filtramos por estados y fecha
+                .Include(o => o.Usuario)
                 .Where(o => estadosActivos.Contains(o.Estado.Nombre) 
                          && o.Fecha >= hoy 
                          && o.Fecha < mañana)
@@ -46,11 +42,8 @@ namespace megadeliciasapi.Controllers
                     o.Id,
                     o.Fecha,
                     Estado = o.Estado.Nombre,
-                    // MEJORADO: Nombre real del mesero
                     Mesero = o.Usuario != null ? o.Usuario.Nombre : "Mesero " + o.UsuarioId,
-                    // Resumen de texto para vista rápida
                     Platos = string.Join(", ", o.Detalles.Select(d => $"{d.Cantidad}x {d.Plato.Nombre}")),
-                    // Detalles completos para vista expandida
                     Items = o.Detalles.Select(d => new { 
                         d.Cantidad, 
                         Nombre = d.Plato.Nombre, 
@@ -61,9 +54,6 @@ namespace megadeliciasapi.Controllers
 
             return Ok(ordenes);
         }
-
-        // GET: api/cocina/historial
-        // NUEVO: Endpoint opcional para ver historial completo (últimos 7 días)
         [HttpGet("historial")]
         public async Task<IActionResult> GetHistorial([FromQuery] int dias = 7)
         {
@@ -93,46 +83,71 @@ namespace megadeliciasapi.Controllers
             return Ok(ordenes);
         }
 
-        // PUT: api/cocina/{id}/estado
-        // Avanzar la orden en el tablero
         [HttpPut("{id}/estado")]
         public async Task<IActionResult> ActualizarEstado(int id, [FromBody] ChangeStateDto dto)
         {
-            var orden = await _context.Ordenes
-                .Include(o => o.Estado)
-                .FirstOrDefaultAsync(o => o.Id == id);
-                
-            if (orden == null) 
-                return NotFound(new { message = "Orden no encontrada" });
-
-            // Buscar el ID del nuevo estado en la BD
-            var nuevoEstado = await _context.EstadosOrden
-                .FirstOrDefaultAsync(e => e.Nombre == dto.Estado);
-            
-            if (nuevoEstado == null) 
-                return BadRequest(new { message = $"Estado '{dto.Estado}' no válido" });
-
-            // Validar transiciones de estado (opcional pero recomendado)
-            if (!EsTransicionValida(orden.Estado.Nombre, dto.Estado))
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return BadRequest(new { 
-                    message = $"No se puede cambiar de {orden.Estado.Nombre} a {dto.Estado}" 
+                var orden = await _context.Ordenes
+                    .Include(o => o.Estado)
+                    .Include(o => o.Detalles)
+                        .ThenInclude(d => d.Plato)
+                    .FirstOrDefaultAsync(o => o.Id == id);
+                    
+                if (orden == null) 
+                    return NotFound(new { message = "Orden no encontrada" });
+
+                var nuevoEstado = await _context.EstadosOrden
+                    .FirstOrDefaultAsync(e => e.Nombre == dto.Estado);
+                
+                if (nuevoEstado == null) 
+                    return BadRequest(new { message = $"Estado '{dto.Estado}' no válido" });
+
+                // Validar transiciones de estado
+                if (!EsTransicionValida(orden.Estado.Nombre, dto.Estado))
+                {
+                    return BadRequest(new { 
+                        message = $"No se puede cambiar de {orden.Estado.Nombre} a {dto.Estado}" 
+                    });
+                }
+
+                // 🔥 LÓGICA DE INVENTARIO: Si pasa a EN_PROCESO, descontar inventario
+                if (dto.Estado == "EN_PROCESO" && orden.Estado.Nombre == "PENDIENTE")
+                {
+                    var resultadoInventario = await DescontarInventario(orden);
+                    if (!resultadoInventario.Exitoso)
+                    {
+                        await transaction.RollbackAsync();
+                        return BadRequest(new { 
+                            message = "No hay suficiente inventario para procesar esta orden",
+                            detalles = resultadoInventario.Mensaje
+                        });
+                    }
+                }
+
+                // Actualizar estado
+                orden.EstadoId = nuevoEstado.Id;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new { 
+                    message = $"Orden #{id} movida a {dto.Estado}",
+                    nuevoEstado = dto.Estado
                 });
             }
-
-            orden.EstadoId = nuevoEstado.Id;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { 
-                message = $"Orden #{id} movida a {dto.Estado}",
-                nuevoEstado = dto.Estado
-            });
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { 
+                    message = "Error al actualizar el estado de la orden",
+                    error = ex.Message 
+                });
+            }
         }
 
-        // NUEVA: Validación de transiciones de estado
         private bool EsTransicionValida(string estadoActual, string nuevoEstado)
         {
-            // Define las transiciones permitidas
             var transicionesPermitidas = new Dictionary<string, string[]>
             {
                 { "PENDIENTE", new[] { "EN_PROCESO", "CANCELADO" } },
@@ -146,8 +161,6 @@ namespace megadeliciasapi.Controllers
                 && transicionesPermitidas[estadoActual].Contains(nuevoEstado);
         }
 
-        // POST: api/cocina/{id}/notificar
-        // NUEVO: Endpoint para notificar al mesero
         [HttpPost("{id}/notificar")]
         public async Task<IActionResult> NotificarMesero(int id)
         {
@@ -161,24 +174,71 @@ namespace megadeliciasapi.Controllers
 
             if (orden.Estado.Nombre != "LISTO")
                 return BadRequest(new { message = "Solo se pueden notificar órdenes listas" });
-
-            // Aquí puedes implementar la notificación real:
-            // - SignalR para notificación en tiempo real
-            // - Email
-            // - SMS
-            // - Push notification
             
-            // Por ahora solo registramos en logs
             Console.WriteLine($"[NOTIFICACIÓN] Orden #{id} lista para {orden.Usuario?.Nombre ?? "Mesero"}");
-
-            // Opcional: Crear tabla de notificaciones
-            // await _context.Notificaciones.AddAsync(new Notificacion { ... });
-            // await _context.SaveChangesAsync();
 
             return Ok(new { 
                 message = $"Notificación enviada a {orden.Usuario?.Nombre ?? "mesero"}",
                 ordenId = id
             });
+        }
+
+        private async Task<(bool Exitoso, string Mensaje)> DescontarInventario(Orden orden)
+        {
+            var ingredientesFaltantes = new List<string>();
+
+            foreach (var detalle in orden.Detalles)
+            {
+
+                var ingredientes = await _context.PlatoIngredientes
+                    .Where(pi => pi.PlatoId == detalle.PlatoId)
+                    .Include(pi => pi.InventarioItem)
+                    .ToListAsync();
+
+                if (!ingredientes.Any())
+                {
+                    ingredientesFaltantes.Add($"❌ {detalle.Plato.Nombre} (sin receta configurada)");
+                    continue;
+                }
+
+                foreach (var ingrediente in ingredientes)
+                {
+                    if (ingrediente.InventarioItem == null)
+                    {
+                        ingredientesFaltantes.Add($"❌ {detalle.Plato.Nombre} (ingrediente no vinculado en inventario)");
+                        continue;
+                    }
+
+                    decimal cantidadNecesaria = ingrediente.CantidadUsada * detalle.Cantidad;
+                    
+                    if (ingrediente.InventarioItem.StockActual < cantidadNecesaria)
+                    {
+                        ingredientesFaltantes.Add(
+                            $"❌ {ingrediente.InventarioItem.Nombre}: Necesitas {cantidadNecesaria} {ingrediente.UnidadMedida}, solo hay {ingrediente.InventarioItem.StockActual}"
+                        );
+                        continue;
+                    }
+
+                    ingrediente.InventarioItem.StockActual -= (int)Math.Ceiling(cantidadNecesaria);
+
+                    _context.InventarioMovimientos.Add(new InventarioMovimiento
+                    {
+                        ItemId = ingrediente.ItemId,
+                        Tipo = "SALIDA",
+                        Cantidad = (int)Math.Ceiling(cantidadNecesaria),
+                        CostoUnitario = ingrediente.InventarioItem.CostoUnitario,
+                        Motivo = $"Orden #{orden.Id} - {detalle.Plato.Nombre} (x{detalle.Cantidad})",
+                        Fecha = DateTime.Now
+                    });
+                }
+            }
+
+            if (ingredientesFaltantes.Any())
+            {
+                return (false, string.Join(" | ", ingredientesFaltantes));
+            }
+
+            return (true, "Inventario descontado correctamente");
         }
     }
 }

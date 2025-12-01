@@ -77,39 +77,106 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
     this.filtroActual = filtro;
   }
 
+  // ✅ MÉTODO PRINCIPAL: Cambiar estado de la orden
   cambiarEstado(ordenId: number, nuevoEstado: string) {
+    // ⚠️ Confirmación SOLO para cancelar (acción destructiva)
+    if (nuevoEstado === 'CANCELADO') {
+      const confirmar = confirm('⚠️ ¿Seguro que deseas cancelar esta orden?');
+      if (!confirmar) return;
+    }
+
     this.loading = true;
     const url = `${this.apiUrl}/${ordenId}/estado`;
     
     this.http.put(url, { estado: nuevoEstado }, this.getHeaders()).subscribe({
-      next: () => {
+      next: (response: any) => {
         this.fetchOrdenes(); 
         this.loading = false;
+        
+        // ✅ Mensaje de éxito solo DESPUÉS de procesar exitosamente
+        if (nuevoEstado === 'EN_PROCESO') {
+          this.mostrarMensajeExito(
+            '✅ Orden en Proceso',
+            'Los ingredientes han sido descontados del inventario correctamente.'
+          );
+        } else if (nuevoEstado === 'LISTO') {
+          this.mostrarMensajeExito(
+            '✅ Orden Lista',
+            'La orden está lista para ser recogida por el mesero.'
+          );
+        } else if (nuevoEstado === 'CANCELADO') {
+          this.mostrarMensajeExito(
+            '⚠️ Orden Cancelada',
+            'La orden ha sido cancelada. No se descontó inventario.'
+          );
+        } else {
+          this.mostrarMensajeExito(
+            '✅ Estado Actualizado',
+            `La orden #${ordenId} ahora está en estado: ${nuevoEstado}`
+          );
+        }
       },
-      error: () => {
-        alert("Error al actualizar la orden");
+      error: (err) => {
         this.loading = false;
+        
+        // ❌ Manejo detallado de errores
+        if (err.error && err.error.message) {
+          const titulo = err.error.message;
+          const detalles = err.error.detalles || '';
+          
+          this.mostrarError(titulo, detalles);
+        } else if (err.status === 0) {
+          this.mostrarError(
+            '❌ Error de Conexión',
+            'No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.'
+          );
+        } else if (err.status === 401) {
+          this.mostrarError(
+            '❌ Sesión Expirada',
+            'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
+          );
+        } else {
+          this.mostrarError(
+            '❌ Error al Actualizar',
+            'Ocurrió un error inesperado. Intenta nuevamente.'
+          );
+        }
       }
     });
   }
 
-  // NUEVA FUNCIÓN: Notificar al mesero
+  // 🆕 MÉTODO AUXILIAR: Mostrar mensaje de éxito
+  private mostrarMensajeExito(titulo: string, mensaje: string) {
+    alert(`${titulo}\n\n${mensaje}`);
+  }
+
+  // 🆕 MÉTODO AUXILIAR: Mostrar error detallado
+  private mostrarError(titulo: string, detalles: string) {
+    if (detalles && detalles.trim() !== '') {
+      // Error con detalles (ej: falta de inventario)
+      alert(
+        `${titulo}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `${detalles}\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+        `💡 Sugerencia: Verifica el inventario antes de procesar esta orden.`
+      );
+    } else {
+      // Error simple
+      alert(titulo);
+    }
+  }
+
+  // FUNCIÓN: Notificar al mesero
   notificarMesero(orden: any) {
-    // Aquí puedes implementar la notificación real (WebSocket, Push, etc.)
-    // Por ahora mostramos un mensaje
     const mensaje = `¡Orden #${orden.id} lista para ${orden.mesero}!`;
     
-    // Opción 1: Usar una alerta visual
     if (confirm(mensaje + '\n\n¿Deseas marcar como notificado?')) {
-      // Aquí podrías hacer una llamada al backend para registrar la notificación
       console.log('Mesero notificado:', orden.mesero);
       
       // Opcional: Cambiar automáticamente a ENTREGADO después de notificar
       // this.cambiarEstado(orden.id, 'ENTREGADO');
     }
-    
-    // Opción 2: Podrías usar un servicio de notificaciones
-    // this.notificationService.notifyWaiter(orden.mesero, mensaje);
   }
 
   getColorEstado(estado: string) {
@@ -132,13 +199,5 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
       case 'CANCELADO': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800';
     }
-  }
-
-  // DEBUG: Función para verificar estados (puedes eliminarla después)
-  verificarEstado(orden: any) {
-    console.log('Orden ID:', orden.id);
-    console.log('Estado:', orden.estado);
-    console.log('Tipo:', typeof orden.estado);
-    console.log('Longitud:', orden.estado?.length);
   }
 }
