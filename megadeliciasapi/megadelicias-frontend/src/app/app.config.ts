@@ -3,20 +3,57 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 
-// 1. IMPORTAMOS LOS ICONOS Y EL MÓDULO AQUÍ
+// 1. IMPORTAMOS TODOS LOS ICONOS QUE USA LA APP
 import { 
   LucideAngularModule, 
-  Search, Trash2, ShoppingCart, PlusCircle, Bell, BellRing, CheckCircle, Coffee 
+  // Iconos del Sidebar
+  LayoutDashboard, 
+  Users, 
+  ChefHat, 
+  Archive, 
+  DollarSign, 
+  LogOut, 
+  UtensilsCrossed,
+  
+  // Iconos del Dashboard (Módulos)
+  Calculator, 
+  Utensils, 
+  Package, 
+  Clipboard, 
+  
+  // Iconos de Mesero y Cocina
+  Search, 
+  Trash2, 
+  ShoppingCart, 
+  PlusCircle, 
+  Bell, 
+  BellRing, 
+  CheckCircle, 
+  Coffee 
 } from 'lucide-angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    // Proveedor de Rutas
     provideRouter(routes),
-    provideHttpClient(withFetch()), // Mantenemos tu configuración de HTTP
     
-    // 2. REGISTRAMOS LOS ICONOS GLOBALMENTE
-    // Esto hace que estén disponibles en cualquier componente que importe LucideAngularModule
+    // Proveedor HTTP (necesario para conectar con .NET)
+    provideHttpClient(withFetch()), 
+    
+    // 2. REGISTRO GLOBAL DE ICONOS
+    // Al hacer esto aquí, ya no necesitas importarlos en cada componente
     importProvidersFrom(LucideAngularModule.pick({ 
+      LayoutDashboard, 
+      Users, 
+      ChefHat, 
+      Archive, 
+      DollarSign, 
+      LogOut, 
+      UtensilsCrossed,
+      Calculator, 
+      Utensils, 
+      Package, 
+      Clipboard,
       Search, 
       Trash2, 
       ShoppingCart, 

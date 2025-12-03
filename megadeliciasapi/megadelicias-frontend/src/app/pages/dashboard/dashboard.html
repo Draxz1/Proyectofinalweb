@@ -13,23 +13,26 @@
 
     <div *ngIf="options.length === 0" class="col-span-full text-center p-10 bg-white rounded-xl shadow-md">
         <h3 class="text-xl font-semibold text-red-600">Acceso Restringido</h3>
-        <p class="text-gray-500">Tu rol no tiene módulos asignados. Contacta al administrador.</p>
+        <p class="text-gray-500">Tu rol no tiene módulos asignados o hubo un error al cargarlos. Contacta al administrador.</p>
     </div>
 
     <div *ngFor="let option of options" 
          (click)="navigate(option.path)"
          class="bg-white rounded-xl shadow-xl p-6 flex flex-col items-center text-center 
                 hover:shadow-2xl hover:bg-gray-50 hover:scale-[1.02] transition-all duration-200 
-                cursor-pointer border border-gray-200">
+                cursor-pointer border border-gray-200 group relative overflow-hidden">
+      
+      <div class="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-5 transition-opacity duration-300"></div>
 
-      <div class="text-6xl text-blue-600 mb-4 bg-blue-50 p-4 rounded-full">
+      <div class="text-blue-600 mb-4 bg-blue-50 p-4 rounded-full group-hover:bg-blue-100 transition-colors z-10">
         <lucide-icon [name]="option.icon" [class]="'w-12 h-12'"></lucide-icon>
       </div>
 
-      <h3 class="text-xl font-semibold text-gray-800">{{ option.label }}</h3>
-      <p class="text-sm text-gray-500 mt-2">
+      <h3 class="text-xl font-semibold text-gray-800 z-10">{{ option.label }}</h3>
+      <p class="text-sm text-gray-500 mt-2 z-10">
         Accede a la gestión de {{ option.label.toLowerCase() }}.
       </p>
     </div>
+
   </div>
 </div>
