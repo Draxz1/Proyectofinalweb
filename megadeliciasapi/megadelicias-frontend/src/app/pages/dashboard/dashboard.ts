@@ -2,8 +2,17 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
 
+// 1. Importamos LucideAngularModule y LOS ICONOS ESPECÍFICOS que vamos a usar
+import { 
+  LucideAngularModule, 
+  Users, 
+  Calculator, 
+  Utensils, 
+  Package, 
+  ChefHat, 
+  Clipboard 
+} from 'lucide-angular';
 
-import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../services/auth'; 
 
 interface DashboardOption {
@@ -19,12 +28,16 @@ interface DashboardOption {
   imports: [
     CommonModule,
     TitleCasePipe,
-    LucideAngularModule 
+    // 2. Usamos .pick() para registrar los iconos y que estén disponibles en el HTML
+    LucideAngularModule
   ],
   templateUrl: './dashboard.html', 
   styleUrl: './dashboard.css'
 })
 export class DashboardComponent implements OnInit {
+  
+  // Registramos los iconos para que el HTML pueda usarlos
+  readonly icons = { Users, Calculator, Utensils, Package, ChefHat, Clipboard };
 
   userName: string = 'Usuario';
   userRole: string = 'visitante';
@@ -34,8 +47,13 @@ export class DashboardComponent implements OnInit {
 
   options: DashboardOption[] = []; 
 
+  constructor() {
+    // Inicializamos los iconos (necesario en algunas versiones de lucide)
+    // En versiones modernas, basta con importar el módulo con .pick en 'imports'
+    // O hacer: imports: [LucideAngularModule.pick({ Users, ... })]
+  }
+
   ngOnInit() {
-    
     const user = this.authService.getUserData();
     if (user) {
       this.userName = user.nombre;
@@ -46,17 +64,19 @@ export class DashboardComponent implements OnInit {
     }
   }
 
- 
   getOptions(role: string): DashboardOption[] {
     const can = (roles: string[]) => role === 'admin' || roles.includes(role);
 
-    
+    // 3. RUTAS CORREGIDAS SEGÚN TU app.routes.ts
     const items: DashboardOption[] = [
       { label: 'Administrador', icon: 'users', path: '/admin', show: can(['admin']) },
-      { label: 'Caja POS', icon: 'calculator', path: '/caja', show: can(['admin', 'cajero', 'mesero']) },
-      { label: 'Mesero / Pedidos', icon: 'utensils', path: '/mesero', show: can(['mesero']) },
+      // Corregido: /caja -> /caja-panel
+      { label: 'Caja POS', icon: 'calculator', path: '/caja-panel', show: can(['admin', 'cajero', 'mesero']) },
+      // Corregido: /mesero -> /mesero-panel
+      { label: 'Mesero / Pedidos', icon: 'utensils', path: '/mesero-panel', show: can(['mesero']) },
       { label: 'Inventario', icon: 'package', path: '/inventario', show: can(['admin']) },
-      { label: 'Cocina', icon: 'chef-hat', path: '/cocina', show: can(['admin', 'cocinero']) },
+      // Corregido: /cocina -> /cocina-panel
+      { label: 'Cocina', icon: 'chef-hat', path: '/cocina-panel', show: can(['admin', 'cocinero']) },
       { label: 'Contabilidad', icon: 'clipboard', path: '/contabilidad', show: can(['admin', 'contable']) },
     ];
 
