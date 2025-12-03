@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth';
@@ -35,7 +35,7 @@ interface Movimiento {
 @Component({
   selector: 'app-caja-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyPipe],
+  imports: [CommonModule, FormsModule],
   templateUrl: './caja-panel.html',
   styleUrls: ['./caja-panel.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
