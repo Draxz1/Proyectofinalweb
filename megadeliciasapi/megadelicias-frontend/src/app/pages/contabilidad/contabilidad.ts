@@ -232,6 +232,58 @@ calcularResumenIngresosGastos() {
       },
     });
 }
+// ==========================
+// Exportar resumen ingresos vs gastos a Excel (CSV)
+// ==========================
+exportarResumenIngresosGastos() {
+  this.limpiarMensajes();
+
+  if (!this.resumenFecha) {
+    this.error = 'No se pudo determinar la fecha del resumen.';
+    return;
+  }
+
+  if (this.resumenGastos == null) {
+    this.error = 'Debes ingresar el total de gastos antes de exportar.';
+    return;
+  }
+
+  if (this.resumenGastos < 0) {
+    this.error = 'Los gastos no pueden ser negativos.';
+    return;
+  }
+
+  const params = {
+    fecha: this.resumenFecha,
+    gastos: String(this.resumenGastos),
+  };
+
+  // Pedimos un blob (archivo) al backend
+  this.http
+    .get(`${this.apiBaseUrl}/resumen-ingresos-gastos-excel`, {
+      ...this.getHeaders(),
+      params,
+      responseType: 'blob' as 'json',
+    })
+    .subscribe({
+      next: (blob: any) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resumen-ingresos-gastos-${this.resumenFecha}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        this.mensajeOk = 'Archivo Excel generado correctamente.';
+      },
+      error: (err) => {
+        console.error('Error al exportar resumen ingresos vs gastos', err);
+        this.error = 'No se pudo exportar el resumen a Excel.';
+      },
+    });
+}
+
 
 
   // ==========================

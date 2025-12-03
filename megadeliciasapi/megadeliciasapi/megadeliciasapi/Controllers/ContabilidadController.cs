@@ -3,6 +3,8 @@ using megadeliciasapi.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+
 
 namespace megadeliciasapi.Controllers
 {
@@ -306,6 +308,132 @@ public async Task<ActionResult<IngresosGastosDto>> GetResumenIngresosGastos(
     };
 
     return Ok(dto);
+}
+[HttpGet("resumen-ingresos-gastos-excel")]
+public async Task<IActionResult> GetResumenIngresosGastosExcel(
+    [FromQuery] decimal gastos,
+    [FromQuery] DateTime? fecha)
+{
+    if (gastos < 0)
+    {
+        return BadRequest(new { message = "Los gastos no pueden ser negativos." });
+    }
+
+    var fechaResumen = (fecha ?? DateTime.Today).Date;
+    var fechaInicio = fechaResumen;
+    var fechaFin = fechaResumen.AddDays(1).AddTicks(-1);
+
+    // 1) VENTA TOTAL SEGÚN LIBRO (MovimientosCaja, tipo INGRESO)
+    var ventaTotalLibro = await _context.MovimientosCaja
+        .Where(m => m.Fecha >= fechaInicio && m.Fecha <= fechaFin && m.Tipo == "INGRESO")
+        .SumAsync(m => (decimal?)m.Monto) ?? 0m;
+
+    // 2) VENTAS POR METODO DE PAGO (Pagos + MetodosPago)
+    var pagos = await _context.Pagos
+        .Include(p => p.MetodoPago)
+        .Where(p => p.FechaPago >= fechaInicio && p.FechaPago <= fechaFin)
+        .ToListAsync();
+
+    var metodos = await _context.MetodosPago.ToListAsync();
+
+    int? idEfectivo = metodos.FirstOrDefault(m =>
+        m.Nombre != null && m.Nombre.Trim().ToLower().Contains("efectivo"))?.Id;
+
+    int? idTarjeta = metodos.FirstOrDefault(m =>
+        m.Nombre != null &&
+        (m.Nombre.Trim().ToLower().Contains("tarjeta") ||
+         m.Nombre.Trim().ToLower().Contains("pos")))?.Id;
+
+    int? idTransferencia = metodos.FirstOrDefault(m =>
+        m.Nombre != null && m.Nombre.Trim().ToLower().Contains("transfer"))?.Id;
+
+    decimal ventaEfectivo = pagos
+        .Where(p => p.MetodoPago != null &&
+            (idEfectivo.HasValue && p.MetodoPagoId == idEfectivo.Value ||
+             !idEfectivo.HasValue && p.MetodoPago.Nombre != null &&
+             p.MetodoPago.Nombre.Trim().ToLower().Contains("efectivo")))
+        .Sum(p => p.MontoPago);
+
+    decimal ventaTarjeta = pagos
+        .Where(p => p.MetodoPago != null &&
+            (idTarjeta.HasValue && p.MetodoPagoId == idTarjeta.Value ||
+             !idTarjeta.HasValue && p.MetodoPago.Nombre != null &&
+             (p.MetodoPago.Nombre.Trim().ToLower().Contains("tarjeta") ||
+              p.MetodoPago.Nombre.Trim().ToLower().Contains("pos"))))
+        .Sum(p => p.MontoPago);
+
+    decimal ventaTransferencia = pagos
+        .Where(p => p.MetodoPago != null &&
+            (idTransferencia.HasValue && p.MetodoPagoId == idTransferencia.Value ||
+             !idTransferencia.HasValue && p.MetodoPago.Nombre != null &&
+             p.MetodoPago.Nombre.Trim().ToLower().Contains("transfer")))
+        .Sum(p => p.MontoPago);
+
+    decimal ventaTotalMediosPago = ventaEfectivo + ventaTarjeta + ventaTransferencia;
+
+    // 3) DIFERENCIA ENTRE LIBRO Y MEDIOS DE PAGO
+    decimal diferenciaVentas = ventaTotalMediosPago - ventaTotalLibro;
+    bool ventasCuadran = diferenciaVentas == 0;
+
+    string tipoDiferencia;
+    if (diferenciaVentas == 0)
+    {
+        tipoDiferencia = "NINGUNA";
+    }
+    else if (diferenciaVentas > 0)
+    {
+        tipoDiferencia = "SOBRO"; // hubo más en medios de pago que en el libro
+    }
+    else
+    {
+        tipoDiferencia = "FALTO"; // hubo menos en medios de pago que en el libro
+    }
+
+    decimal diferenciaAbs = Math.Abs(diferenciaVentas);
+
+    // 4) RESULTADO DESPUÉS DE GASTOS (utilidad del día según libro)
+    decimal resultado = ventaTotalLibro - gastos;
+    bool estaEnNegativo = resultado < 0;
+
+    // 5) ARMAR CSV
+    var sb = new StringBuilder();
+
+    // Encabezados (columnas que verán en Excel)
+    sb.AppendLine(
+        "Fecha," +
+        "VentaTotalLibro," +
+        "VentaEfectivo," +
+        "VentaTarjeta," +
+        "VentaTransferencia," +
+        "VentaTotalMediosPago," +
+        "DiferenciaVentas," +
+        "TipoDiferencia," +
+        "CuadroVentas," +
+        "Gastos," +
+        "Resultado," +
+        "EstaEnNegativo"
+    );
+
+    // Fila única con la info del día
+    sb.AppendLine(string.Join(",",
+        fechaResumen.ToString("yyyy-MM-dd"),
+        ventaTotalLibro.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ventaEfectivo.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ventaTarjeta.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ventaTransferencia.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        ventaTotalMediosPago.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        diferenciaVentas.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        tipoDiferencia,
+        ventasCuadran ? "SI" : "NO",
+        gastos.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        resultado.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        estaEnNegativo ? "SI" : "NO"
+    ));
+
+    var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+    var nombreArchivo = $"resumen-ventas-{fechaResumen:yyyyMMdd}.csv";
+
+    return File(bytes, "text/csv", nombreArchivo);
 }
 
 
