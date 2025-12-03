@@ -144,153 +144,170 @@ namespace megadeliciasapi.Controllers
         // 3. CREAR CIERRE
         // ==========================
         [HttpPost("crear-cierre")]
-        public async Task<ActionResult> CrearCierre([FromBody] CrearCierreContabilidadDto dto)
+public async Task<ActionResult> CrearCierre([FromBody] CrearCierreContabilidadDto dto)
+{
+    if (!ModelState.IsValid)
+        return BadRequest(ModelState);
+
+    if (dto.CajaInicial < 0)
+        return BadRequest(new { message = "La caja inicial no puede ser negativa." });
+
+    if (dto.EfectivoContado < 0)
+        return BadRequest(new { message = "El efectivo contado no puede ser negativo." });
+
+    // ⚠️ Regla nueva: el cierre SIEMPRE es del día actual
+    var fecha = DateTime.Today;
+    var fechaInicio = fecha.Date;
+    var fechaFin = fecha.Date.AddDays(1).AddTicks(-1);
+
+    // (Opcional) Validar que lo que venga en dto.Fecha también sea hoy,
+    // por si el docente quiere ver esa validación:
+    if (dto.Fecha.Date != fecha)
+    {
+        return BadRequest(new { message = "Solo puedes crear cierres del día actual." });
+    }
+
+    // Verificar si ya existe un cierre para hoy
+    var cierreExistente = await _context.CierresCaja
+        .Where(c => c.Desde.Date <= fecha.Date && c.Hasta.Date >= fecha.Date)
+        .FirstOrDefaultAsync();
+
+    if (cierreExistente != null)
+    {
+        return BadRequest(new { message = "Ya existe un cierre para el día de hoy." });
+    }
+
+    // ===== AQUÍ SIGUE IGUAL: sumar pagos del día por método =====
+
+    var pagos = await _context.Pagos
+        .Include(p => p.MetodoPago)
+        .Where(p => p.FechaPago >= fechaInicio && p.FechaPago <= fechaFin)
+        .ToListAsync();
+
+    var metodos = await _context.MetodosPago.ToListAsync();
+
+    int? idEfectivo = metodos.FirstOrDefault(m =>
+        m.Nombre != null && m.Nombre.Trim().ToLower().Contains("efectivo"))?.Id;
+
+    int? idTarjeta = metodos.FirstOrDefault(m =>
+        m.Nombre != null && (m.Nombre.Trim().ToLower().Contains("tarjeta") ||
+                             m.Nombre.Trim().ToLower().Contains("pos")) )?.Id;
+
+    int? idTransferencia = metodos.FirstOrDefault(m =>
+        m.Nombre != null && m.Nombre.Trim().ToLower().Contains("transfer"))?.Id;
+
+    decimal totalEfectivo = pagos
+        .Where(p => p.MetodoPago != null &&
+                    ((idEfectivo.HasValue && p.MetodoPagoId == idEfectivo.Value) ||
+                     (!idEfectivo.HasValue && p.MetodoPago!.Nombre != null &&
+                      p.MetodoPago.Nombre.Trim().ToLower().Contains("efectivo"))))
+        .Sum(p => p.MontoPago);
+
+    decimal totalTarjeta = pagos
+        .Where(p => p.MetodoPago != null &&
+                    ((idTarjeta.HasValue && p.MetodoPagoId == idTarjeta.Value) ||
+                     (!idTarjeta.HasValue && p.MetodoPago!.Nombre != null &&
+                      (p.MetodoPago.Nombre.Trim().ToLower().Contains("tarjeta") ||
+                       p.MetodoPago.Nombre.Trim().ToLower().Contains("pos")))))
+        .Sum(p => p.MontoPago);
+
+    decimal totalTransferencia = pagos
+        .Where(p => p.MetodoPago != null &&
+                    ((idTransferencia.HasValue && p.MetodoPagoId == idTransferencia.Value) ||
+                     (!idTransferencia.HasValue && p.MetodoPago!.Nombre != null &&
+                      p.MetodoPago.Nombre.Trim().ToLower().Contains("transfer"))))
+        .Sum(p => p.MontoPago);
+
+    // Efectivo esperado = caja inicial + ventas en efectivo del día
+    decimal efectivoEsperado = dto.CajaInicial + totalEfectivo;
+    decimal diferencia = dto.EfectivoContado - efectivoEsperado;
+
+    var movimientos = await _context.MovimientosCaja
+        .Where(m => m.Fecha >= fechaInicio && m.Fecha <= fechaFin && m.CierreId == null)
+        .ToListAsync();
+
+    var cierre = new Models.CierreCaja
+    {
+        UsuarioId = dto.UsuarioId,
+        Desde = fechaInicio,
+        Hasta = fechaFin,
+        TotalEfectivo = totalEfectivo,
+        TotalTarjetas = totalTarjeta,
+        TotalTransferencias = totalTransferencia,
+        EfectivoContado = dto.EfectivoContado,
+        Diferencia = diferencia,
+        Observaciones = dto.Observaciones,
+        CreadoEn = DateTime.Now
+    };
+
+    _context.CierresCaja.Add(cierre);
+    await _context.SaveChangesAsync();
+
+    foreach (var movimiento in movimientos)
+    {
+        movimiento.CierreId = cierre.Id;
+    }
+    await _context.SaveChangesAsync();
+
+    return Ok(new
+    {
+        message = "Cierre creado correctamente.",
+        cierre = new CierreResumenDto
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            if (dto.CajaInicial < 0)
-                return BadRequest(new { message = "La caja inicial no puede ser negativa." });
-
-            if (dto.EfectivoContado < 0)
-                return BadRequest(new { message = "El efectivo contado no puede ser negativo." });
-
-            var fecha = dto.Fecha.Date;
-            var fechaInicio = fecha.Date;
-            var fechaFin = fecha.Date.AddDays(1).AddTicks(-1);
-
-            var cierreExistente = await _context.CierresCaja
-                .Where(c => c.Desde.Date <= fecha.Date && c.Hasta.Date >= fecha.Date)
-                .FirstOrDefaultAsync();
-
-            if (cierreExistente != null)
-            {
-                return BadRequest(new { message = "Ya existe un cierre para esta fecha." });
-            }
-
-            var pagos = await _context.Pagos
-                .Include(p => p.MetodoPago)
-                .Where(p => p.FechaPago >= fechaInicio && p.FechaPago <= fechaFin)
-                .ToListAsync();
-
-            var metodos = await _context.MetodosPago.ToListAsync();
-
-            int? idEfectivo = metodos.FirstOrDefault(m =>
-                m.Nombre != null && m.Nombre.Trim().ToLower().Contains("efectivo"))?.Id;
-
-            int? idTarjeta = metodos.FirstOrDefault(m =>
-                m.Nombre != null && (m.Nombre.Trim().ToLower().Contains("tarjeta") ||
-                                     m.Nombre.Trim().ToLower().Contains("pos")) )?.Id;
-
-            int? idTransferencia = metodos.FirstOrDefault(m =>
-                m.Nombre != null && m.Nombre.Trim().ToLower().Contains("transfer"))?.Id;
-
-            decimal totalEfectivo = pagos
-                .Where(p => p.MetodoPago != null &&
-                            ((idEfectivo.HasValue && p.MetodoPagoId == idEfectivo.Value) ||
-                             (!idEfectivo.HasValue && p.MetodoPago!.Nombre != null &&
-                              p.MetodoPago.Nombre.Trim().ToLower().Contains("efectivo"))))
-                .Sum(p => p.MontoPago);
-
-            decimal totalTarjeta = pagos
-                .Where(p => p.MetodoPago != null &&
-                            ((idTarjeta.HasValue && p.MetodoPagoId == idTarjeta.Value) ||
-                             (!idTarjeta.HasValue && p.MetodoPago!.Nombre != null &&
-                              (p.MetodoPago.Nombre.Trim().ToLower().Contains("tarjeta") ||
-                               p.MetodoPago.Nombre.Trim().ToLower().Contains("pos")))))
-                .Sum(p => p.MontoPago);
-
-            decimal totalTransferencia = pagos
-                .Where(p => p.MetodoPago != null &&
-                            ((idTransferencia.HasValue && p.MetodoPagoId == idTransferencia.Value) ||
-                             (!idTransferencia.HasValue && p.MetodoPago!.Nombre != null &&
-                              p.MetodoPago.Nombre.Trim().ToLower().Contains("transfer"))))
-                .Sum(p => p.MontoPago);
-
-            decimal efectivoEsperado = dto.CajaInicial + totalEfectivo;
-            decimal diferencia = dto.EfectivoContado - efectivoEsperado;
-
-            var movimientos = await _context.MovimientosCaja
-                .Where(m => m.Fecha >= fechaInicio && m.Fecha <= fechaFin && m.CierreId == null)
-                .ToListAsync();
-
-            var cierre = new Models.CierreCaja
-            {
-                UsuarioId = dto.UsuarioId,
-                Desde = fechaInicio,
-                Hasta = fechaFin,
-                TotalEfectivo = totalEfectivo,
-                TotalTarjetas = totalTarjeta,
-                TotalTransferencias = totalTransferencia,
-                EfectivoContado = dto.EfectivoContado,
-                Diferencia = diferencia,
-                Observaciones = dto.Observaciones,
-                CreadoEn = DateTime.Now
-            };
-
-            _context.CierresCaja.Add(cierre);
-            await _context.SaveChangesAsync();
-
-            foreach (var movimiento in movimientos)
-            {
-                movimiento.CierreId = cierre.Id;
-            }
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Cierre creado correctamente.",
-                cierre = new CierreResumenDto
-                {
-                    Fecha = fecha.ToString("yyyy-MM-dd"),
-                    TotalEfectivo = totalEfectivo,
-                    TotalTarjeta = totalTarjeta,
-                    TotalTransferencia = totalTransferencia,
-                    CajaInicial = dto.CajaInicial,
-                    EfectivoContado = dto.EfectivoContado,
-                    EfectivoEsperado = efectivoEsperado,
-                    Diferencia = diferencia,
-                    Cuadro = diferencia == 0
-                }
-            });
+            Fecha = fecha.ToString("yyyy-MM-dd"),
+            TotalEfectivo = totalEfectivo,
+            TotalTarjeta = totalTarjeta,
+            TotalTransferencia = totalTransferencia,
+            CajaInicial = dto.CajaInicial,
+            EfectivoContado = dto.EfectivoContado,
+            EfectivoEsperado = efectivoEsperado,
+            Diferencia = diferencia,
+            Cuadro = diferencia == 0
         }
+    });
+}
+
 
         // ==========================
-        // 4. RESUMEN INGRESOS vs GASTOS
-        // ==========================
-        [HttpGet("resumen-ingresos-gastos")]
-        public async Task<ActionResult<IngresosGastosDto>> GetResumenIngresosGastos(
-            [FromQuery] DateTime desde,
-            [FromQuery] DateTime hasta,
-            [FromQuery] decimal gastos)
-        {
-            if (hasta.Date < desde.Date)
-                return BadRequest(new { message = "La fecha hasta no puede ser menor que la fecha desde." });
+// 4. RESUMEN INGRESOS vs GASTOS (UN SOLO DÍA)
+// GET: api/Contabilidad/resumen-ingresos-gastos?fecha=2025-11-24&gastos=1500
+// Si no se manda fecha, usa el día de hoy.
+// ==========================
+[HttpGet("resumen-ingresos-gastos")]
+public async Task<ActionResult<IngresosGastosDto>> GetResumenIngresosGastos(
+    [FromQuery] decimal gastos,
+    [FromQuery] DateTime? fecha)
+{
+    // Regla de tu compañero: ningún número ingresado puede ser negativo
+    if (gastos < 0)
+    {
+        return BadRequest(new { message = "Los gastos no pueden ser negativos." });
+    }
 
-            if (gastos < 0)
-                return BadRequest(new { message = "Los gastos no pueden ser negativos." });
+    // Por defecto, el resumen es del día de hoy
+    var fechaResumen = (fecha ?? DateTime.Today).Date;
+    var fechaInicio = fechaResumen;
+    var fechaFin = fechaResumen.AddDays(1).AddTicks(-1);
 
-            var desdeDate = desde.Date;
-            var hastaDate = hasta.Date.AddDays(1).AddTicks(-1);
+    // Ingresos = movimientos de caja tipo "INGRESO" de ese día
+    var totalIngresos = await _context.MovimientosCaja
+        .Where(m => m.Fecha >= fechaInicio && m.Fecha <= fechaFin && m.Tipo == "INGRESO")
+        .SumAsync(m => (decimal?)m.Monto) ?? 0m;
 
-            var totalIngresos = await _context.MovimientosCaja
-                .Where(m => m.Fecha >= desdeDate && m.Fecha <= hastaDate && m.Tipo == "INGRESO")
-                .SumAsync(m => (decimal?)m.Monto) ?? 0m;
+    var resultado = totalIngresos - gastos;
 
-            var resultado = totalIngresos - gastos;
+    var dto = new IngresosGastosDto
+    {
+        Fecha = fechaResumen.ToString("yyyy-MM-dd"),
+        TotalIngresos = totalIngresos,
+        TotalGastos = gastos,
+        Resultado = resultado,
+        EstaEnNegativo = resultado < 0
+    };
 
-            var dto = new IngresosGastosDto
-            {
-                Desde = desdeDate.ToString("yyyy-MM-dd"),
-                Hasta = hastaDate.ToString("yyyy-MM-dd"),
-                TotalIngresos = totalIngresos,
-                TotalGastos = gastos,
-                Resultado = resultado,
-                EstaEnNegativo = resultado < 0
-            };
+    return Ok(dto);
+}
 
-            return Ok(dto);
-        }
 
         // ==========================
         // 5. BALANCE GENERAL

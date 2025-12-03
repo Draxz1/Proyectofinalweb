@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace megadeliciasapi.DTOs
 {
+    // ==========================
+    // 1. CIERRE DIARIO / POR FECHA
+    // ==========================
     // ===== CIERRE CAJA =====
     public class CierreResumenDto
     {
@@ -39,15 +42,15 @@ namespace megadeliciasapi.DTOs
 
     // ===== INGRESOS vs GASTOS =====
     public class IngresosGastosDto
-    {
-        public string Desde { get; set; } = string.Empty;
-        public string Hasta { get; set; } = string.Empty;
+{
+    public string Fecha { get; set; } = string.Empty;
 
-        public decimal TotalIngresos { get; set; }
-        public decimal TotalGastos { get; set; }
-        public decimal Resultado { get; set; }
-        public bool EstaEnNegativo { get; set; }
-    }
+    public decimal TotalIngresos { get; set; }
+    public decimal TotalGastos { get; set; }
+    public decimal Resultado { get; set; }
+    public bool EstaEnNegativo { get; set; }
+}
+
 
     // ===== BALANCE GENERAL =====
     public class BalanceGeneralDto
@@ -69,5 +72,70 @@ namespace megadeliciasapi.DTOs
 
         // True si se cumple A = P + PN
         public bool Cuadra { get; set; }
+    }
+
+public class LibroDiarioMovimientoDto
+    {
+        public DateTime Fecha { get; set; }
+        // INGRESO o EGRESO (según MovimientosCaja.Tipo)
+        public string Tipo { get; set; } = string.Empty;
+        public decimal Monto { get; set; }
+    }
+
+   
+    // ==========================
+    // MAYOR (para cuenta Caja)
+    // ==========================
+    public class MayorMovimientoDto
+    {
+        public DateTime Fecha { get; set; }
+        public string Tipo { get; set; } = string.Empty;
+        public decimal Cargo { get; set; }   // egreso
+        public decimal Abono { get; set; }   // ingreso
+        public decimal Saldo { get; set; }   // saldo acumulado
+    }
+
+
+    public class MayorCuentaDto
+    {
+        public string Cuenta { get; set; } = string.Empty;
+        public List<MayorMovimientoDto> Movimientos { get; set; } = new();
+        public decimal TotalCargos { get; set; }
+        public decimal TotalAbonos { get; set; }
+        public decimal SaldoFinal { get; set; }
+    }
+
+    // ==========================
+    // 6. BALANZA DE COMPROBACIÓN
+    // ==========================
+    public class BalanzaComprobacionCuentaDto
+    {
+        public string Cuenta { get; set; } = string.Empty;
+        public decimal TotalCargos { get; set; }
+        public decimal TotalAbonos { get; set; }
+    }
+
+    public class BalanzaComprobacionDto
+    {
+        public string Desde { get; set; } = string.Empty;
+        public string Hasta { get; set; } = string.Empty;
+
+        public List<BalanzaComprobacionCuentaDto> Cuentas { get; set; } = new();
+
+        public decimal TotalCargos { get; set; }
+        public decimal TotalAbonos { get; set; }
+        public bool Cuadra { get; set; }  // true si TotalCargos == TotalAbonos
+    }
+
+     public class LibroDiarioDto
+    {
+        public string Desde { get; set; } = string.Empty;
+        public string Hasta { get; set; } = string.Empty;
+
+        public List<LibroDiarioMovimientoDto> Movimientos { get; set; } = new();
+
+        // En contabilidad: cargos = egresos, abonos = ingresos
+        public decimal TotalCargos { get; set; } // EGRESO
+        public decimal TotalAbonos { get; set; } // INGRESO
     }
 }
