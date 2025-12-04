@@ -5,8 +5,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../services/auth';
 
-
-
 interface CierreFecha {
   fecha: string;
   totalEfectivo: number;
@@ -74,27 +72,37 @@ export class ContabilidadComponent implements OnInit {
   resumenFecha: string = '';
   resumenGastos: number | null = null;
 
-
   // Formulario para crear cierre
-crearCierreFecha: string = '';
-crearCierreCajaInicial: number | null = null;
-crearCierreEfectivoContado: number | null = null;
-crearCierreObservaciones: string = '';
+  crearCierreFecha: string = '';
+  crearCierreCajaInicial: number | null = null;
+  crearCierreEfectivoContado: number | null = null;
+  crearCierreObservaciones: string = '';
 
   // Fecha del balance general
-  fechaBalance: string = new Date().toISOString().split('T')[0];
+  fechaBalance: string = '';
 
- ngOnInit(): void {
-  const hoy = new Date().toISOString().split('T')[0];
+  // ==========================
+  // Helper para obtener la fecha local (NO UTC)
+  // ==========================
+  private getFechaLocalHoy(): string {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // yyyy-MM-dd
+  }
 
-  this.crearCierreFecha = hoy;   // ya lo usábamos para el cierre
-  this.resumenFecha = hoy;       // la misma fecha para el resumen
+  ngOnInit(): void {
+    const hoy = this.getFechaLocalHoy();
 
-  this.cargarCierreHoy();
-  this.cargarBalanceGeneral?.(); // si tienes balance general
-}
+    // Usamos la misma fecha local en todos los formularios
+    this.crearCierreFecha = hoy;
+    this.resumenFecha = hoy;
+    this.fechaBalance = hoy;
 
-
+    this.cargarCierreHoy();
+    this.cargarBalanceGeneral();
+  }
 
   private getHeaders() {
     const token = this.authService.getToken();
@@ -127,7 +135,6 @@ crearCierreObservaciones: string = '';
         },
         error: (err) => {
           console.error('Error al cargar cierre diario', err);
-          // Si no hay cierre, no es un error, simplemente no hay datos
           if (err.status === 404) {
             this.cierreHoy = null;
           } else {
@@ -167,7 +174,6 @@ crearCierreObservaciones: string = '';
         },
         error: (err) => {
           console.error('Error al buscar cierre por fecha', err);
-          // Si no hay cierre, no es un error, simplemente no hay datos
           if (err.status === 404) {
             this.cierreBuscado = null;
             this.error = 'No se encontró cierre para la fecha seleccionada.';
@@ -179,185 +185,180 @@ crearCierreObservaciones: string = '';
       });
   }
 
- // ==========================
-// 3. Resumen ingresos vs gastos (UN SOLO DÍA)
-// ==========================
-calcularResumenIngresosGastos() {
-  this.limpiarMensajes();
-  this.resumenIngresosGastos = null;
+  // ==========================
+  // 3. Resumen ingresos vs gastos (UN SOLO DÍA)
+  // ==========================
+  calcularResumenIngresosGastos() {
+    this.limpiarMensajes();
+    this.resumenIngresosGastos = null;
 
-  // La fecha del resumen siempre es un solo día (por defecto hoy)
-  if (!this.resumenFecha) {
-    this.error = 'No se pudo determinar la fecha del resumen.';
-    return;
-  }
+    if (!this.resumenFecha) {
+      this.error = 'No se pudo determinar la fecha del resumen.';
+      return;
+    }
 
-  if (this.resumenGastos == null) {
-    this.error = 'Debes ingresar el total de gastos.';
-    return;
-  }
+    if (this.resumenGastos == null) {
+      this.error = 'Debes ingresar el total de gastos.';
+      return;
+    }
 
-  if (this.resumenGastos < 0) {
-    this.error = 'Los gastos no pueden ser negativos.';
-    return;
-  }
+    if (this.resumenGastos < 0) {
+      this.error = 'Los gastos no pueden ser negativos.';
+      return;
+    }
 
-  this.cargandoResumen = true;
+    this.cargandoResumen = true;
 
-  this.http
-    .get<ResumenIngresosGastos>(
-      `${this.apiBaseUrl}/resumen-ingresos-gastos`,
-      {
-        ...this.getHeaders(),
-        params: {
-          fecha: this.resumenFecha,                 
-          gastos: String(this.resumenGastos),
-        },
-      }
-    )
-    .subscribe({
-      next: (resp) => {
-        this.resumenIngresosGastos = resp;
-        this.mensajeOk = 'Resumen de ingresos y gastos calculado correctamente.';
-        this.cargandoResumen = false;
-      },
-      error: (err) => {
-        console.error('Error al calcular resumen de ingresos y gastos', err);
-        if (err.status === 400 && err.error?.message) {
-          this.error = err.error.message;
-        } else {
-          this.error = 'No se pudo calcular el resumen de ingresos y gastos.';
+    this.http
+      .get<ResumenIngresosGastos>(
+        `${this.apiBaseUrl}/resumen-ingresos-gastos`,
+        {
+          ...this.getHeaders(),
+          params: {
+            fecha: this.resumenFecha,
+            gastos: String(this.resumenGastos),
+          },
         }
-        this.cargandoResumen = false;
-      },
-    });
-}
-// ==========================
-// Exportar resumen ingresos vs gastos a Excel (CSV)
-// ==========================
-exportarResumenIngresosGastos() {
-  this.limpiarMensajes();
-
-  if (!this.resumenFecha) {
-    this.error = 'No se pudo determinar la fecha del resumen.';
-    return;
+      )
+      .subscribe({
+        next: (resp) => {
+          this.resumenIngresosGastos = resp;
+          this.mensajeOk = 'Resumen de ingresos y gastos calculado correctamente.';
+          this.cargandoResumen = false;
+        },
+        error: (err) => {
+          console.error('Error al calcular resumen de ingresos y gastos', err);
+          if (err.status === 400 && err.error?.message) {
+            this.error = err.error.message;
+          } else {
+            this.error = 'No se pudo calcular el resumen de ingresos y gastos.';
+          }
+          this.cargandoResumen = false;
+        },
+      });
   }
 
-  if (this.resumenGastos == null) {
-    this.error = 'Debes ingresar el total de gastos antes de exportar.';
-    return;
+  // ==========================
+  // Exportar resumen ingresos vs gastos a Excel (CSV)
+  // ==========================
+  exportarResumenIngresosGastos() {
+    this.limpiarMensajes();
+
+    if (!this.resumenFecha) {
+      this.error = 'No se pudo determinar la fecha del resumen.';
+      return;
+    }
+
+    if (this.resumenGastos == null) {
+      this.error = 'Debes ingresar el total de gastos antes de exportar.';
+      return;
+    }
+
+    if (this.resumenGastos < 0) {
+      this.error = 'Los gastos no pueden ser negativos.';
+      return;
+    }
+
+    const params = {
+      fecha: this.resumenFecha,
+      gastos: String(this.resumenGastos),
+    };
+
+    this.http
+      .get(`${this.apiBaseUrl}/resumen-ingresos-gastos-excel`, {
+        ...this.getHeaders(),
+        params,
+        responseType: 'blob' as 'json',
+      })
+      .subscribe({
+        next: (blob: any) => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `resumen-ingresos-gastos-${this.resumenFecha}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          this.mensajeOk = 'Archivo Excel generado correctamente.';
+        },
+        error: (err) => {
+          console.error('Error al exportar resumen ingresos vs gastos', err);
+          this.error = 'No se pudo exportar el resumen a Excel.';
+        },
+      });
   }
-
-  if (this.resumenGastos < 0) {
-    this.error = 'Los gastos no pueden ser negativos.';
-    return;
-  }
-
-  const params = {
-    fecha: this.resumenFecha,
-    gastos: String(this.resumenGastos),
-  };
-
-  // Pedimos un blob (archivo) al backend
-  this.http
-    .get(`${this.apiBaseUrl}/resumen-ingresos-gastos-excel`, {
-      ...this.getHeaders(),
-      params,
-      responseType: 'blob' as 'json',
-    })
-    .subscribe({
-      next: (blob: any) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `resumen-ingresos-gastos-${this.resumenFecha}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        this.mensajeOk = 'Archivo Excel generado correctamente.';
-      },
-      error: (err) => {
-        console.error('Error al exportar resumen ingresos vs gastos', err);
-        this.error = 'No se pudo exportar el resumen a Excel.';
-      },
-    });
-}
-
-
 
   // ==========================
   // 4. Crear/Guardar cierre diario
   // ==========================
   crearCierre() {
-  this.limpiarMensajes();
+    this.limpiarMensajes();
 
-  // YA no preguntamos si eligió fecha, porque forzamos la de hoy
-  if (this.crearCierreCajaInicial == null || this.crearCierreCajaInicial < 0) {
-    this.error = 'Debes ingresar la caja inicial (no puede ser negativa).';
-    return;
-  }
-
-  if (this.crearCierreEfectivoContado == null || this.crearCierreEfectivoContado < 0) {
-    this.error = 'Debes ingresar el efectivo contado (no puede ser negativo).';
-    return;
-  }
-
-  const token = this.authService.getToken();
-  let usuarioId = 0;
-  
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      usuarioId = parseInt(payload.sub || payload.nameid || '0');
-    } catch (e) {
-      console.error('Error al obtener usuario ID', e);
+    if (this.crearCierreCajaInicial == null || this.crearCierreCajaInicial < 0) {
+      this.error = 'Debes ingresar la caja inicial (no puede ser negativa).';
+      return;
     }
+
+    if (this.crearCierreEfectivoContado == null || this.crearCierreEfectivoContado < 0) {
+      this.error = 'Debes ingresar el efectivo contado (no puede ser negativo).';
+      return;
+    }
+
+    const token = this.authService.getToken();
+    let usuarioId = 0;
+
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        usuarioId = parseInt(payload.sub || payload.nameid || '0');
+      } catch (e) {
+        console.error('Error al obtener usuario ID', e);
+      }
+    }
+
+    if (usuarioId === 0) {
+      this.error = 'No se pudo obtener el ID del usuario.';
+      return;
+    }
+
+    this.guardandoCierre = true;
+
+    const body = {
+      usuarioId: usuarioId,
+      fecha: this.crearCierreFecha, // fecha local de hoy
+      cajaInicial: this.crearCierreCajaInicial,
+      efectivoContado: this.crearCierreEfectivoContado,
+      observaciones: this.crearCierreObservaciones || null,
+    };
+
+    this.http
+      .post<any>(`${this.apiBaseUrl}/crear-cierre`, body, this.getHeaders())
+      .subscribe({
+        next: (resp) => {
+          this.mensajeOk = resp.message || 'Cierre creado correctamente.';
+          this.guardandoCierre = false;
+
+          const hoy = this.getFechaLocalHoy();
+          if (this.crearCierreFecha === hoy) {
+            this.cargarCierreHoy();
+          }
+
+          this.crearCierreCajaInicial = null;
+          this.crearCierreEfectivoContado = null;
+          this.crearCierreObservaciones = '';
+        },
+        error: (err) => {
+          console.error('Error al crear cierre', err);
+          if (err.status === 400 && err.error?.message) {
+            this.error = err.error.message;
+          } else {
+            this.error = 'No se pudo crear el cierre.';
+          }
+          this.guardandoCierre = false;
+        },
+      });
   }
-
-  if (usuarioId === 0) {
-    this.error = 'No se pudo obtener el ID del usuario.';
-    return;
-  }
-
-  this.guardandoCierre = true;
-
-  const body = {
-    usuarioId: usuarioId,
-    fecha: this.crearCierreFecha,              // siempre hoy
-    cajaInicial: this.crearCierreCajaInicial,
-    efectivoContado: this.crearCierreEfectivoContado,
-    observaciones: this.crearCierreObservaciones || null
-  };
-
-  this.http
-    .post<any>(`${this.apiBaseUrl}/crear-cierre`, body, this.getHeaders())
-    .subscribe({
-      next: (resp) => {
-        this.mensajeOk = resp.message || 'Cierre creado correctamente.';
-        this.guardandoCierre = false;
-
-        const hoy = new Date().toISOString().split('T')[0];
-        if (this.crearCierreFecha === hoy) {
-          this.cargarCierreHoy();
-        }
-
-        this.crearCierreCajaInicial = null;
-        this.crearCierreEfectivoContado = null;
-        this.crearCierreObservaciones = '';
-      },
-      error: (err) => {
-        console.error('Error al crear cierre', err);
-        if (err.status === 400 && err.error?.message) {
-          this.error = err.error.message;
-        } else {
-          this.error = 'No se pudo crear el cierre.';
-        }
-        this.guardandoCierre = false;
-      },
-    });
-}
-
 
   // ==========================
   // 5. Balance general

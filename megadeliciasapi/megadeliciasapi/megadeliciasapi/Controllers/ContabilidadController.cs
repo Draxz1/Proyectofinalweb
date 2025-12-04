@@ -169,15 +169,7 @@ public async Task<ActionResult> CrearCierre([FromBody] CrearCierreContabilidadDt
         return BadRequest(new { message = "Solo puedes crear cierres del día actual." });
     }
 
-    // Verificar si ya existe un cierre para hoy
-    var cierreExistente = await _context.CierresCaja
-        .Where(c => c.Desde.Date <= fecha.Date && c.Hasta.Date >= fecha.Date)
-        .FirstOrDefaultAsync();
-
-    if (cierreExistente != null)
-    {
-        return BadRequest(new { message = "Ya existe un cierre para el día de hoy." });
-    }
+   
 
     // ===== AQUÍ SIGUE IGUAL: sumar pagos del día por método =====
 

@@ -151,159 +151,86 @@
 </section>
 
 
-    <!-- 3. CREAR CIERRE -->
+
+
+       <!-- 4. RESUMEN INGRESOS VS GASTOS -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
       <h2 class="text-lg font-semibold text-gray-800">
-        Crear cierre de caja
+        Resumen ingresos vs gastos
       </h2>
       <p class="text-xs text-gray-500">
-        Registra el cierre de un día: caja inicial, efectivo contado y observaciones.
+        Compara los ingresos registrados en caja con los gastos del día.
       </p>
 
-      <form (ngSubmit)="crearCierre()" class="grid grid-cols-1 gap-3 text-sm">
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Fecha del cierre</span>
-          <input
-            type="date"
-            name="crearCierreFecha"
-            [(ngModel)]="crearCierreFecha"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            required />
-        </label>
+      <!-- FORMULARIO SOLO PARA CALCULAR -->
+      <form (ngSubmit)="calcularResumenIngresosGastos()" class="grid grid-cols-1 gap-3 text-sm">
+
+        <!-- Fecha solo lectura (el día del resumen, normalmente hoy) -->
+        <div class="flex flex-col gap-1">
+          <span class="text-xs text-gray-600">Fecha</span>
+          <span class="px-3 py-2 rounded-md bg-gray-100 border border-gray-200 text-sm text-gray-700">
+            {{ resumenFecha }}
+          </span>
+        </div>
 
         <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Caja inicial</span>
+          <span class="text-xs text-gray-600">Total de gastos</span>
           <input
             type="number"
-            name="crearCierreCajaInicial"
-            [(ngModel)]="crearCierreCajaInicial"
+            name="resumenGastos"
+            [(ngModel)]="resumenGastos"
             min="0"
             step="0.01"
             class="border border-gray-300 rounded-md px-3 py-2 text-sm"
             required />
-        </label>
-
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Efectivo contado</span>
-          <input
-            type="number"
-            name="crearCierreEfectivoContado"
-            [(ngModel)]="crearCierreEfectivoContado"
-            min="0"
-            step="0.01"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            required />
-        </label>
-
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Observaciones (opcional)</span>
-          <textarea
-            name="crearCierreObservaciones"
-            [(ngModel)]="crearCierreObservaciones"
-            rows="3"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"></textarea>
         </label>
 
         <button
           type="submit"
-          class="mt-1 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
-          [disabled]="guardandoCierre">
-          {{ guardandoCierre ? 'Guardando...' : 'Crear cierre' }}
+          class="mt-1 px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium"
+          [disabled]="cargandoResumen">
+          {{ cargandoResumen ? 'Calculando...' : 'Calcular resumen' }}
         </button>
       </form>
+
+      <!-- RESULTADO DEL RESUMEN -->
+      <div *ngIf="resumenIngresosGastos" class="mt-3 text-sm space-y-1">
+        <p><strong>Fecha:</strong> {{ resumenIngresosGastos.fecha }}</p>
+        <p><strong>Total ingresos (día):</strong> L. {{ resumenIngresosGastos.totalIngresos | number:'1.2-2' }}</p>
+        <p><strong>Total gastos (día):</strong> L. {{ resumenIngresosGastos.totalGastos | number:'1.2-2' }}</p>
+        <p><strong>Resultado:</strong> L. {{ resumenIngresosGastos.resultado | number:'1.2-2' }}</p>
+        <p>
+          <strong>Estado:</strong>
+          <span
+            [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'">
+            {{ resumenIngresosGastos.estaEnNegativo ? 'En negativo' : 'En positivo' }}
+          </span>
+        </p>
+      </div>
     </section>
 
-    <!-- 4. RESUMEN INGRESOS VS GASTOS -->
+        <!-- 5. EXPORTAR RESUMEN A EXCEL (SEPARADO) -->
     <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
-  <h2 class="text-lg font-semibold text-gray-800">
-    Resumen ingresos vs gastos
-  </h2>
-  <p class="text-xs text-gray-500">
-    Compara los ingresos registrados en caja con los gastos del día.
-  </p>
+      <h2 class="text-lg font-semibold text-gray-800">
+        Exportar resumen a Excel
+      </h2>
+      <p class="text-xs text-gray-500">
+        Usa la misma fecha y total de gastos indicados en el resumen anterior.
+      </p>
 
-  <form (ngSubmit)="calcularResumenIngresosGastos()" class="grid grid-cols-1 gap-3 text-sm">
+      <div class="text-sm space-y-1 mb-3">
+        <p><strong>Fecha:</strong> {{ resumenFecha }}</p>
+        <p><strong>Total de gastos:</strong> L. {{ (resumenGastos ?? 0) | number:'1.2-2' }}</p>
+      </div>
 
-    <!-- Fecha solo lectura (el día del resumen, normalmente hoy) -->
-    <div class="flex flex-col gap-1">
-      <span class="text-xs text-gray-600">Fecha</span>
-      <span class="px-3 py-2 rounded-md bg-gray-100 border border-gray-200 text-sm text-gray-700">
-        {{ resumenFecha }}
-      </span>
-    </div>
+      <button
+        type="button"
+        (click)="exportarResumenIngresosGastos()"
+        class="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium">
+        Exportar a Excel
+      </button>
+    </section>
 
-    <label class="flex flex-col gap-1">
-      <span class="text-xs text-gray-600">Total de gastos</span>
-      <input
-        type="number"
-        name="resumenGastos"
-        [(ngModel)]="resumenGastos"
-        min="0"
-        step="0.01"
-        class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-        required />
-    </label>
-
-    <button
-      type="submit"
-      class="mt-1 px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium"
-      [disabled]="cargandoResumen">
-      {{ cargandoResumen ? 'Calculando...' : 'Calcular resumen' }}
-    </button>
-  </form>
-
-  <div *ngIf="resumenIngresosGastos" class="mt-3 text-sm space-y-1">
-    <p><strong>Fecha:</strong> {{ resumenIngresosGastos.fecha }}</p>
-    <p><strong>Total ingresos (día):</strong> L. {{ resumenIngresosGastos.totalIngresos | number:'1.2-2' }}</p>
-    <p><strong>Total gastos (día):</strong> L. {{ resumenIngresosGastos.totalGastos | number:'1.2-2' }}</p>
-    <p><strong>Resultado:</strong> L. {{ resumenIngresosGastos.resultado | number:'1.2-2' }}</p>
-    <p>
-      <strong>Estado:</strong>
-      <span
-        [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'">
-        {{ resumenIngresosGastos.estaEnNegativo ? 'En negativo' : 'En positivo' }}
-      </span>
-    </p>
-  </div>
-  <form (ngSubmit)="calcularResumenIngresosGastos()" class="grid grid-cols-1 gap-3 text-sm">
-  <!-- Fecha solo lectura -->
-  <div class="flex flex-col gap-1">
-    <span class="text-xs text-gray-600">Fecha</span>
-    <span class="px-3 py-2 rounded-md bg-gray-100 border border-gray-200 text-sm text-gray-700">
-      {{ resumenFecha }}
-    </span>
-  </div>
-
-  <label class="flex flex-col gap-1">
-    <span class="text-xs text-gray-600">Total de gastos</span>
-    <input
-      type="number"
-      name="resumenGastos"
-      [(ngModel)]="resumenGastos"
-      min="0"
-      step="0.01"
-      class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-      required />
-  </label>
-
-  <div class="flex flex-row gap-2 mt-1">
-    <button
-      type="submit"
-      class="px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium"
-      [disabled]="cargandoResumen">
-      {{ cargandoResumen ? 'Calculando...' : 'Calcular resumen' }}
-    </button>
-
-    <button
-      type="button"
-      (click)="exportarResumenIngresosGastos()"
-      class="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium">
-      Exportar a Excel
-    </button>
-  </div>
-</form>
-
-</section>
 
 
     <!-- 5. BALANCE GENERAL -->
