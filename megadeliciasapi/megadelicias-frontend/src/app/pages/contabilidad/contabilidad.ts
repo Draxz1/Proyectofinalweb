@@ -87,12 +87,14 @@ crearCierreObservaciones: string = '';
  ngOnInit(): void {
   const hoy = new Date().toISOString().split('T')[0];
 
-  this.crearCierreFecha = hoy;   // ya lo usábamos para el cierre
-  this.resumenFecha = hoy;       // la misma fecha para el resumen
+  this.crearCierreFecha = hoy;
+  this.resumenFecha = hoy;
 
   this.cargarCierreHoy();
-  this.cargarBalanceGeneral?.(); // si tienes balance general
+  // Llamada directa (la función existe en esta clase)
+  this.cargarBalanceGeneral();
 }
+
 
 
 

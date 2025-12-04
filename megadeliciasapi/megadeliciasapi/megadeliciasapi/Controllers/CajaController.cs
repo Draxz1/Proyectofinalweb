@@ -168,62 +168,110 @@ public async Task<IActionResult> RegistrarPago(int id, [FromBody] RegistrarPagoD
         _context.Pagos.Add(pago);
         await _context.SaveChangesAsync(); // Obtener pago.Id
 
-        // 8) Crear MovimientoCaja (INGRESO)
-        var movimiento = new MovimientoCaja
-        {
-            UsuarioId = usuarioId,
-            Tipo = "INGRESO",
-            Monto = dto.Monto,
-            MetodoPagoId = metodoPago.Id,
-            Descripcion = $"Pago Orden #{orden.Id} - Mesa {orden.MesaId}",
-            PagoId = pago.Id,
-            Fecha = DateTime.Now
-        };
-        _context.MovimientosCaja.Add(movimiento);
-        await _context.SaveChangesAsync(); // Obtener movimiento.Id
+       // 8) Crear MovimientoCaja (INGRESO)
+var movimiento = new MovimientoCaja
+{
+    UsuarioId = usuarioId,
+    Tipo = "INGRESO",
+    Monto = dto.Monto,
+    MetodoPagoId = metodoPago.Id,
+    Descripcion = $"Pago Orden #{orden.Id} - Mesa {orden.MesaId}",
+    PagoId = pago.Id,
+    Fecha = DateTime.Now
+};
+_context.MovimientosCaja.Add(movimiento);
+await _context.SaveChangesAsync(); // Obtener movimiento.Id
 
-        // 9) (Opcional) Cambiar estado de la orden a ENTREGADO
-        var estadoEntregado = await _context.EstadosOrden.FirstOrDefaultAsync(e => e.Nombre == "ENTREGADO");
-        if (estadoEntregado != null)
-        {
-            orden.EstadoId = estadoEntregado.Id;
-            _context.Ordenes.Update(orden);
-            await _context.SaveChangesAsync();
-        }
+// 9) Crear Factura (dentro de la misma transacción)
+decimal tasaImpuesto = 0.15m; // ajustar si hace falta
+decimal totalFactura = dto.Monto;
+decimal subtotalFactura = Math.Round(totalFactura / (1 + tasaImpuesto), 2);
+decimal impuestoFactura = Math.Round(totalFactura - subtotalFactura, 2);
 
-        // 10) Commit transacción
-        await transaction.CommitAsync();
+// Generar número simple (puedes usar otro mecanismo real si tienes secuencias)
+var ultimaFactura = await _context.Facturas.OrderByDescending(f => f.Id).FirstOrDefaultAsync();
+int siguienteNumero = (ultimaFactura != null) ? ultimaFactura.Id + 1 : 1;
+string numeroFactura = siguienteNumero.ToString().PadLeft(8, '0');
 
-        // 11) Recuperar y proyectar el movimiento creado en un DTO para devolver al frontend
-        var movimientoCompleto = await _context.MovimientosCaja
-            .Where(x => x.Id == movimiento.Id)
-            .Select(m => new MovimientoResponseDto
-            {
-                Id = m.Id,
-                UsuarioId = m.UsuarioId,
-                UsuarioNombre = m.Usuario != null ? m.Usuario.Nombre : null,
-                Tipo = m.Tipo,
-                Monto = m.Monto,
-                MetodoPagoId = m.MetodoPagoId,
-                MetodoPagoNombre = m.MetodoPago != null ? m.MetodoPago.Nombre : null,
-                Descripcion = m.Descripcion,
-                PagoId = m.PagoId,
-                Fecha = m.Fecha,
-                CierreId = m.CierreId
-            })
-            .FirstOrDefaultAsync();
+var factura = new Factura
+{
+    PagoId = pago.Id,
+    NumeroFactura = numeroFactura,
+    FechaEmision = DateTime.Now,
+    Subtotal = subtotalFactura,
+    Impuesto = impuestoFactura,
+    Total = totalFactura,
+    Cai = "DEMO-CAI-000000000", // reemplaza por real
+    RangoAutorizado = "00000001-00001000", // reemplaza por real
+    FechaLimiteEmision = DateTime.Today.AddMonths(6),
+    Estado = "EMITIDA"
+};
 
-        // 12) Responder con información útil (incluye el movimiento proyectado)
-        return Ok(new
-        {
-            message = "Pago registrado correctamente",
-            ventaId = venta.Id,
-            pagoId = pago.Id,
-            movimiento = movimientoCompleto,
-            ordenId = orden.Id,
-            metodoPago = metodoPago.Nombre,
-            monto = dto.Monto
-        });
+_context.Facturas.Add(factura);
+await _context.SaveChangesAsync();
+
+// 10) (Opcional) Cambiar estado de la orden a ENTREGADO
+var estadoEntregado = await _context.EstadosOrden.FirstOrDefaultAsync(e => e.Nombre == "ENTREGADO");
+if (estadoEntregado != null)
+{
+    orden.EstadoId = estadoEntregado.Id;
+    _context.Ordenes.Update(orden);
+    await _context.SaveChangesAsync();
+}
+
+// 11) Commit transacción
+await transaction.CommitAsync();
+
+// 12) Recuperar y proyectar el movimiento creado en un DTO para devolver al frontend
+var movimientoCompleto = await _context.MovimientosCaja
+    .Where(x => x.Id == movimiento.Id)
+    .Select(m => new MovimientoResponseDto
+    {
+        Id = m.Id,
+        UsuarioId = m.UsuarioId,
+        UsuarioNombre = m.Usuario != null ? m.Usuario.Nombre : null,
+        Tipo = m.Tipo,
+        Monto = m.Monto,
+        MetodoPagoId = m.MetodoPagoId,
+        MetodoPagoNombre = m.MetodoPago != null ? m.MetodoPago.Nombre : null,
+        Descripcion = m.Descripcion,
+        PagoId = m.PagoId,
+        Fecha = m.Fecha,
+        CierreId = m.CierreId
+    })
+    .FirstOrDefaultAsync();
+
+// Recuperar la factura para enviar al frontend
+var facturaCompleta = await _context.Facturas
+    .Where(f => f.Id == factura.Id)
+    .Select(f => new
+    {
+        f.Id,
+        f.PagoId,
+        f.NumeroFactura,
+        f.FechaEmision,
+        f.Subtotal,
+        f.Impuesto,
+        f.Total,
+        f.Cai,
+        f.RangoAutorizado,
+        f.FechaLimiteEmision,
+        f.Estado
+    }).FirstOrDefaultAsync();
+
+// 13) Responder con información útil (incluye el movimiento proyectado y la factura)
+return Ok(new
+{
+    message = "Pago registrado correctamente",
+    ventaId = venta.Id,
+    pagoId = pago.Id,
+    movimiento = movimientoCompleto,
+    ordenId = orden.Id,
+    metodoPago = metodoPago.Nombre,
+    monto = dto.Monto,
+    factura = facturaCompleta
+});
+
     }
     catch (Exception ex)
     {
