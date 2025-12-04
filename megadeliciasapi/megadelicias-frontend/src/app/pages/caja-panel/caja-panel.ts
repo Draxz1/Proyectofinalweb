@@ -57,16 +57,19 @@ export class CajaPanelComponent implements OnInit, OnDestroy {
   filtroActual = 'Todos';
   metodoSeleccionadoPorOrden: { [ordenId: number]: string } = {};
 
+  // Factura actual para modal / impresión
+  facturaActual: any = null;
+  showFacturaModal = false;
+
   get ordenesFiltradas() {
-  const ordenes = this.ordenesSubject.value || [];
-  if (this.filtroActual === 'Todos') return ordenes;
-  return ordenes.filter(o => o.estado === this.filtroActual);
-}
+    const ordenes = this.ordenesSubject.value || [];
+    if (this.filtroActual === 'Todos') return ordenes;
+    return ordenes.filter(o => o.estado === this.filtroActual);
+  }
 
-get movimientosFiltrados(): Movimiento[] {
-  return this.movimientosSubject.value || [];
-}
-
+  get movimientosFiltrados(): Movimiento[] {
+    return this.movimientosSubject.value || [];
+  }
 
   get metodosPago() {
     return this.metodosPagoSubject.value || [];
@@ -84,71 +87,71 @@ get movimientosFiltrados(): Movimiento[] {
     return { headers: new HttpHeaders({ 'Authorization': `Bearer ${token}` }) };
   }
 
- ngOnInit(): void {
-  this.fetchMetodosPago();
+  ngOnInit(): void {
+    this.fetchMetodosPago();
 
-  timer(0, this.pollIntervalMs).pipe(
-    takeUntil(this.destroy$),
-    switchMap(() => {
-      const o$ = this.http.get<any[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
-        catchError(err => {
-          console.error('Error obteniendo órdenes:', err);
-          return of([] as any[]);
-        })
-      );
-      const m$ = this.http.get<any[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
-        catchError(err => {
-          console.error('Error obteniendo movimientos:', err);
-          return of([] as any[]);
-        })
-      );
-      return forkJoin([o$, m$]);
-    }),
-    tap(([ordenesRaw, movimientosRaw]) => {
-      // Normalizar Órdenes (backend puede devolver PascalCase)
-      const ordenes = (ordenesRaw || []).map(o => ({
-        id: o.id ?? o.Id,
-        mesaId: o.mesaId ?? o.MesaId,
-        meseroNombre: o.meseroNombre ?? o.MeseroNombre ?? (o.usuario ? (o.usuario.nombre ?? o.usuario.Nombre) : undefined),
-        total: o.total ?? o.Total ?? o.TotalOrden,
-        fechaCreacion: o.fechaCreacion ?? o.FechaCreacion ?? o.fecha,
-        estado: o.estado ?? o.Estado
-      })) as Orden[];
+    timer(0, this.pollIntervalMs).pipe(
+      takeUntil(this.destroy$),
+      switchMap(() => {
+        const o$ = this.http.get<any[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
+          catchError(err => {
+            console.error('Error obteniendo órdenes:', err);
+            return of([] as any[]);
+          })
+        );
+        const m$ = this.http.get<any[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
+          catchError(err => {
+            console.error('Error obteniendo movimientos:', err);
+            return of([] as any[]);
+          })
+        );
+        return forkJoin([o$, m$]);
+      }),
+      tap(([ordenesRaw, movimientosRaw]) => {
+        // Normalizar Órdenes (backend puede devolver PascalCase)
+        const ordenes = (ordenesRaw || []).map(o => ({
+          id: o.id ?? o.Id,
+          mesaId: o.mesaId ?? o.MesaId,
+          meseroNombre: o.meseroNombre ?? o.MeseroNombre ?? (o.usuario ? (o.usuario.nombre ?? o.usuario.Nombre) : undefined),
+          total: o.total ?? o.Total ?? o.TotalOrden,
+          fechaCreacion: o.fechaCreacion ?? o.FechaCreacion ?? o.fecha,
+          estado: o.estado ?? o.Estado,
+          platos: o.platos ?? o.Platos ?? []
+        })) as Orden[];
 
-      // Normalizar Movimientos (backend puede devolver PascalCase)
-      const movimientos = (movimientosRaw || []).map(m => ({
-        id: m.id ?? m.Id,
-        monto: m.monto ?? m.Monto,
-        tipo: m.tipo ?? m.Tipo,
-        fecha: m.fecha ?? m.Fecha ?? m.fechaPago ?? m.FechaPago,
-        usuario: {
-          nombre: (m.usuario && (m.usuario.nombre ?? m.usuario.Nombre)) ?? (m.usuarioNombre ?? m.UsuarioNombre) ?? null
-        },
-        metodoPago: {
-          nombre: (m.metodoPago && (m.metodoPago.nombre ?? m.metodoPago.Nombre)) ?? (m.metodoPagoNombre ?? null)
-        },
-        descripcion: m.descripcion ?? m.Descripcion,
-      })) as Movimiento[];
+        // Normalizar Movimientos (backend puede devolver PascalCase)
+        const movimientos = (movimientosRaw || []).map(m => ({
+          id: m.id ?? m.Id,
+          monto: m.monto ?? m.Monto,
+          tipo: m.tipo ?? m.Tipo,
+          fecha: m.fecha ?? m.Fecha ?? m.fechaPago ?? m.FechaPago,
+          usuario: {
+            nombre: (m.usuario && (m.usuario.nombre ?? m.usuario.Nombre)) ?? (m.usuarioNombre ?? m.UsuarioNombre) ?? null
+          },
+          metodoPago: {
+            nombre: (m.metodoPago && (m.metodoPago.nombre ?? m.metodoPago.Nombre)) ?? (m.metodoPagoNombre ?? null)
+          },
+          descripcion: m.descripcion ?? m.Descripcion,
+        })) as Movimiento[];
 
-      // Push al Subject
-      this.ordenesSubject.next(ordenes);
-      this.movimientosSubject.next(movimientos);
-      this.cdr.markForCheck();
-    })
-  ).subscribe({
-    error: err => console.error('Error en polling caja:', err)
-  });
-}
-
+        // Push al Subject
+        this.ordenesSubject.next(ordenes);
+        this.movimientosSubject.next(movimientos);
+        this.cdr.markForCheck();
+      })
+    ).subscribe({
+      error: err => console.error('Error en polling caja:', err)
+    });
+  }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  fetchMetordesPago() {
-    // Endpoint sin auth
-    this.http.get<any[]>('http://localhost:5143/api/caja/metodos-pago').pipe(
+  // --------- Métodos para métodos de pago ----------
+  fetchMetodosPago() {
+    this.http.get<any[]>(`${this.apiUrl}/metodos-pago`).pipe(
       takeUntil(this.destroy$),
       catchError(err => {
         console.error('Error obteniendo métodos de pago:', err);
@@ -165,20 +168,7 @@ get movimientosFiltrados(): Movimiento[] {
     ).subscribe();
   }
 
-  fetchMetodosPago() {
-    this.http.get<any[]>('http://localhost:5143/api/caja/metodos-pago').subscribe({
-      next: (data) => {
-        const metodos = data.map(m => ({
-          id: m.Id ?? m.id,
-          nombre: m.Nombre ?? m.nombre
-        }));
-        this.metodosPagoSubject.next(metodos);
-        this.cdr.markForCheck();
-      },
-      error: (err) => console.error('Error métodos de pago:', err)
-    });
-  }
-
+  // --------- Registrar Pago (modificado para recibir y mostrar factura) ----------
   registrarPago(orden: Orden) {
     const metodoNombre = this.metodoSeleccionadoPorOrden[orden.id];
     if (!metodoNombre) return;
@@ -193,34 +183,64 @@ get movimientosFiltrados(): Movimiento[] {
     this.loadingSubject.next(true);
     const url = `${this.apiUrl}/ordenes/${orden.id}/pagar`;
 
-    this.http.post(url, { metodoPagoId: metodo.id, monto: orden.total }, this.getHeaders()).pipe(
+    this.http.post<any>(url, { metodoPagoId: metodo.id, monto: orden.total }, this.getHeaders()).pipe(
       takeUntil(this.destroy$),
       catchError(err => {
         console.error('Error al registrar el pago', err);
-        alert('Error al registrar el pago');
+        alert(err?.error?.message ?? 'Error al registrar el pago');
         this.loadingSubject.next(false);
         return of(null);
       }),
       tap(res => {
         if (res !== null) {
-          // ✅ Refrescar TODO tras el pago
-          const o$ = this.http.get<Orden[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
+          // Si viene factura en la respuesta, mostrar modal
+          this.handlePagoSuccess(res);
+
+          // Refrescar órdenes y movimientos
+          const o$ = this.http.get<any[]>(`${this.apiUrl}/ordenes-pendientes`, this.getHeaders()).pipe(
             catchError(err => {
               console.error('Error recargando órdenes:', err);
-              return of([] as Orden[]);
+              return of([] as any[]);
             })
           );
-          const m$ = this.http.get<Movimiento[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
+          const m$ = this.http.get<any[]>(`${this.apiUrl}/movimientos`, this.getHeaders()).pipe(
             catchError(err => {
               console.error('Error recargando movimientos:', err);
-              return of([] as Movimiento[]);
+              return of([] as any[]);
             })
           );
-          forkJoin([o$, m$]).subscribe(([nuevasOrdenes, nuevosMovimientos]) => {
-            this.ordenesSubject.next(nuevasOrdenes);
-            this.movimientosSubject.next(nuevosMovimientos);
-            delete this.metodoSeleccionadoPorOrden[orden.id];
-            this.cdr.markForCheck();
+          forkJoin([o$, m$]).subscribe({
+            next: ([nuevasOrdenesRaw, nuevosMovimientosRaw]) => {
+              const ordenes = (nuevasOrdenesRaw || []).map(o => ({
+                id: o.id ?? o.Id,
+                mesaId: o.mesaId ?? o.MesaId,
+                meseroNombre: o.meseroNombre ?? o.MeseroNombre ?? (o.usuario ? (o.usuario.nombre ?? o.usuario.Nombre) : undefined),
+                total: o.total ?? o.Total ?? o.TotalOrden,
+                fechaCreacion: o.fechaCreacion ?? o.FechaCreacion ?? o.fecha,
+                estado: o.estado ?? o.Estado,
+                platos: o.platos ?? o.Platos ?? []
+              })) as Orden[];
+
+              const movimientos = (nuevosMovimientosRaw || []).map(m => ({
+                id: m.id ?? m.Id,
+                monto: m.monto ?? m.Monto,
+                tipo: m.tipo ?? m.Tipo,
+                fecha: m.fecha ?? m.Fecha ?? m.fechaPago ?? m.FechaPago,
+                usuario: {
+                  nombre: (m.usuario && (m.usuario.nombre ?? m.usuario.Nombre)) ?? (m.usuarioNombre ?? m.UsuarioNombre) ?? null
+                },
+                metodoPago: {
+                  nombre: (m.metodoPago && (m.metodoPago.nombre ?? m.metodoPago.Nombre)) ?? (m.metodoPagoNombre ?? null)
+                },
+                descripcion: m.descripcion ?? m.Descripcion,
+              })) as Movimiento[];
+
+              this.ordenesSubject.next(ordenes);
+              this.movimientosSubject.next(movimientos);
+              delete this.metodoSeleccionadoPorOrden[orden.id];
+              this.cdr.markForCheck();
+            },
+            error: err => console.error('Error en forkJoin recarga post-pago:', err)
           });
         }
         this.loadingSubject.next(false);
@@ -228,10 +248,96 @@ get movimientosFiltrados(): Movimiento[] {
     ).subscribe();
   }
 
+  // Manejo de respuesta exitosa de pago (muestra factura en modal)
+  private handlePagoSuccess(response: any) {
+    if (response && response.factura) {
+      this.facturaActual = response.factura;
+      this.showFacturaModal = true;
+      this.cdr.markForCheck();
+    } else {
+      // Si backend no devuelve la factura, continuar pero avisar
+      console.warn('Pago registrado pero no se devolvió factura en la respuesta.');
+    }
+  }
+
+  // Abrir nueva ventana con HTML de la factura y lanzar print()
+  imprimirFactura() {
+    if (!this.facturaActual) return;
+
+    const f = this.facturaActual;
+    const numero = f.NumeroFactura ?? f.numeroFactura ?? f.Numero ?? f.numero;
+    const subtotal = Number(f.Subtotal ?? f.subtotal ?? 0).toFixed(2);
+    const impuesto = Number(f.Impuesto ?? f.impuesto ?? 0).toFixed(2);
+    const total = Number(f.Total ?? f.total ?? 0).toFixed(2);
+    const cai = f.Cai ?? f.cai ?? '';
+    const rango = f.RangoAutorizado ?? f.rangoAutorizado ?? '';
+    const fechaLimite = f.FechaLimiteEmision ?? f.fechaLimiteEmision ?? f.FechaLimite ?? null;
+    const fechaEmision = f.FechaEmision ?? f.fechaEmision ?? new Date().toISOString();
+
+    const html = `
+      <html>
+        <head>
+          <title>Factura ${numero}</title>
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; padding: 20px; }
+            .header { text-align:center; margin-bottom: 10px; }
+            .header h2 { margin: 0; }
+            .meta { font-size: 12px; color: #444; margin-top: 6px; }
+            .items { margin-top:20px; width:100%; border-collapse: collapse; font-size: 14px;}
+            .items td, .items th { border: 1px solid #ddd; padding: 8px; }
+            .totals { margin-top: 12px; float:right; font-size: 14px; }
+            .small { font-size: 12px; color:#666; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>MegaDelicias</h2>
+            <div class="meta">Factura: <strong>${numero}</strong></div>
+            <div class="meta">Fecha: ${new Date(fechaEmision).toLocaleString()}</div>
+            <div class="meta small">CAI: ${cai}</div>
+          </div>
+
+          <table class="items">
+            <thead>
+              <tr><th>Concepto</th><th>Valor</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Subtotal</td><td>L. ${subtotal}</td></tr>
+              <tr><td>Impuesto</td><td>L. ${impuesto}</td></tr>
+              <tr><td>Total</td><td><strong>L. ${total}</strong></td></tr>
+            </tbody>
+          </table>
+
+          <div class="totals small">
+            <div>Rango autorizado: ${rango}</div>
+            <div>Válida hasta: ${fechaLimite ? new Date(fechaLimite).toLocaleDateString() : ''}</div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              setTimeout(() => { window.print(); }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const w = window.open('', '_blank', 'width=800,height=600');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    } else {
+      alert('El navegador bloqueó la apertura de la ventana de impresión. Permite popups para este sitio.');
+    }
+  }
+
   setFiltro(filtro: string) {
-  this.filtroActual = filtro;
-  this.cdr.markForCheck(); // Forzar actualización de la vista
-}
+    this.filtroActual = filtro;
+    this.cdr.markForCheck(); // Forzar actualización de la vista
+  }
 
   trackByOrden(_index: number, item: Orden) {
     return item.id;
