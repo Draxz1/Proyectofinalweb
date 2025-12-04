@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
-
-// 1. SOLO IMPORTAMOS EL MÓDULO BASE (Sin iconos individuales)
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
@@ -13,7 +11,7 @@ import { LucideAngularModule } from 'lucide-angular';
   imports: [
     CommonModule, 
     FormsModule, 
-    LucideAngularModule // 2. IMPORTACIÓN LIMPIA (Sin .pick)
+    LucideAngularModule
   ],
   templateUrl: './mesero-panel.html',
   styleUrl: './mesero-panel.css'
@@ -27,7 +25,7 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
   platos: any[] = [];
   mesas: any[] = [];
   items: any[] = []; 
-  ordenesListas: any[] = []; 
+  ordenesListas: any[] = []; // ✅ Lista de órdenes listas para entregar
   
   // Filtros
   buscar: string = "";
@@ -54,6 +52,10 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
   // Feedback
   msg: string = "";
   loading: boolean = false;
+  
+  // ✅ NUEVO: Set para rastrear qué órdenes están siendo procesadas
+  ordenesEnProceso = new Set<number>();
+  
   intervalo: any;
 
   // Inyecciones
@@ -67,10 +69,10 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
     this.fetchMesas();
     this.fetchOrdenesListas(); 
     
-    // Polling cada 15 segundos
+    // ⚡ Polling cada 10 segundos (más frecuente para notificaciones en tiempo real)
     this.intervalo = setInterval(() => {
       this.fetchOrdenesListas();
-    }, 15000);
+    }, 10000);
   }
 
   ngOnDestroy() {
@@ -126,27 +128,99 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- ENTREGAS ---
+  // ✅ ENTREGAS - Obtener órdenes listas (con filtrado de órdenes en proceso)
   fetchOrdenesListas() {
     this.http.get<any[]>(`${this.apiUrl}/Mesero/ordenes`, this.getHeaders()).subscribe({
       next: (data) => {
-        this.ordenesListas = data.filter(o => o.estado === 'LISTA');
-        this.cd.detectChanges(); 
+        console.log('📥 Órdenes recibidas del backend:', data.length, 'órdenes');
+        
+        // ⚡ CRÍTICO: Filtrar órdenes que están siendo procesadas
+        // Esto previene que reaparezcan mientras el servidor las procesa
+        const dataFiltrada = data.filter(o => !this.ordenesEnProceso.has(o.id));
+        
+        if (dataFiltrada.length < data.length) {
+          console.log(`🚫 Filtradas ${data.length - dataFiltrada.length} órdenes en proceso`);
+        }
+        
+        // ✅ Solo actualizar si hay cambios reales
+        const idsNuevos = dataFiltrada.map(o => o.id).sort().join(',');
+        const idsActuales = this.ordenesListas.map(o => o.id).sort().join(',');
+        
+        if (idsNuevos !== idsActuales) {
+          this.ordenesListas = dataFiltrada;
+          console.log(`✅ Lista actualizada: ${this.ordenesListas.length} órdenes - IDs: [${dataFiltrada.map(o => o.id).join(', ')}]`);
+          this.cd.detectChanges();
+        } else {
+          console.log('⏭️ Sin cambios en IDs');
+        }
       },
-      error: (err) => console.error("Error buscando entregas:", err)
+      error: (err) => {
+        console.error("❌ Error buscando entregas:", err);
+      }
     });
   }
 
+  // ✅ Método helper para verificar si una orden está siendo procesada
+  estaEnProceso(ordenId: number): boolean {
+    return this.ordenesEnProceso.has(ordenId);
+  }
+
+  // ✅ Marcar orden como entregada (HÍBRIDO: UX optimista + protección)
   marcarEntregado(ordenId: number) {
+    // Evitar doble clic en la MISMA orden
+    if (this.ordenesEnProceso.has(ordenId)) {
+      console.log(`⏭️ Orden #${ordenId} ya está siendo procesada`);
+      return;
+    }
+    
+    // ✅ Mensaje simplificado
+    const confirmar = confirm(`Confirmar entrega de Orden #${ordenId}`);
+    if (!confirmar) return;
+
+    // 💾 Guardar referencia a la orden por si necesitamos restaurarla
+    const ordenAEliminar = this.ordenesListas.find(o => o.id === ordenId);
+    if (!ordenAEliminar) {
+      console.error('❌ Orden no encontrada en la lista');
+      return;
+    }
+
+    // ✅ Marcar esta orden como "en proceso"
+    this.ordenesEnProceso.add(ordenId);
+    console.log(`🔄 Orden #${ordenId} agregada a procesamiento. Total: ${this.ordenesEnProceso.size}`);
+
+    // ⚡ CRÍTICO: Eliminar INMEDIATAMENTE de la UI (UX optimista)
+    this.ordenesListas = this.ordenesListas.filter(o => o.id !== ordenId);
+    console.log(`🗑️ Orden #${ordenId} eliminada de UI (optimista)`);
+    this.cd.detectChanges();
+
+    // Enviar al servidor
     this.http.post(`${this.apiUrl}/Mesero/entregar/${ordenId}`, {}, this.getHeaders()).subscribe({
       next: () => {
-        this.msg = "✅ Orden entregada y cerrada.";
-        this.fetchOrdenesListas(); 
-        setTimeout(() => this.msg = "", 3000);
+        console.log(`✅ Servidor confirmó entrega de #${ordenId}`);
+        
+        // ✅ Remover del Set de procesamiento (mantiene la eliminación)
+        this.ordenesEnProceso.delete(ordenId);
+        console.log(`🔓 Orden #${ordenId} confirmada. Total en proceso: ${this.ordenesEnProceso.size}`);
+        
+        this.msg = "✅ Entregada";
+        setTimeout(() => this.msg = "", 2000);
       },
       error: (err) => {
-        console.error(err);
-        this.msg = "❌ Error al marcar entrega.";
+        console.error('❌ Error al marcar entrega:', err);
+        
+        // ⚡ SI HAY ERROR: Restaurar la orden en la lista
+        console.log(`🔄 Restaurando orden #${ordenId} por error del servidor`);
+        this.ordenesListas.push(ordenAEliminar);
+        this.ordenesListas.sort((a, b) => a.id - b.id); // Mantener orden
+        
+        // ✅ Remover del Set
+        this.ordenesEnProceso.delete(ordenId);
+        console.log(`🔓 Orden #${ordenId} restaurada. Total en proceso: ${this.ordenesEnProceso.size}`);
+        
+        this.msg = "❌ Error al entregar";
+        setTimeout(() => this.msg = "", 3000);
+        
+        this.cd.detectChanges();
       }
     });
   }
