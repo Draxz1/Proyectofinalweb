@@ -1,6 +1,6 @@
 using megadeliciasapi.Data;
 using megadeliciasapi.Models;
-using megadeliciasapi.Services; // <-- Se mantiene solo esta
+using megadeliciasapi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -26,8 +26,9 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// --- 3. REGISTRAR SERVICIO DE EMAIL ---
-builder.Services.AddScoped<IEmailService, EmailService>(); 
+// --- 3. REGISTRAR SERVICIOS ---
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<InventarioService>(); // ⭐ NUEVO
 
 // --- 4. CONFIGURACIÓN DE JWT (AUTENTICACIÓN) ---
 builder.Services.AddAuthentication(options =>
@@ -37,7 +38,6 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    // Validación de seguridad
     var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key no está configurada en appsettings");
 
     options.TokenValidationParameters = new TokenValidationParameters

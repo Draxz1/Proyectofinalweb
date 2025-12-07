@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace megadeliciasapi.DTOs {
-
- public class BalanzaComprobacionCuentaDto
+namespace megadeliciasapi.DTOs 
+{
+    public class BalanzaComprobacionCuentaDto
     {
         public string Cuenta { get; set; } = string.Empty;
         public decimal TotalCargos { get; set; }

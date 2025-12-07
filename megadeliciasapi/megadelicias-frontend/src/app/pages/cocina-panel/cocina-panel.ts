@@ -1,26 +1,28 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { AuthService } from '../../services/auth';
+import { AuthService } from '../../services/auth'; // Asegúrate que la ruta sea correcta
 
 @Component({
   selector: 'app-cocina-panel',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './cocina-panel.html',
-  styleUrl: './cocina-panel.css'
+  templateUrl: './cocina-panel.html', // Corregido nombre estándar
+  styleUrl: './cocina-panel.css' // Corregido nombre estándar
 })
 export class CocinaPanelComponent implements OnInit, OnDestroy {
   
   ordenes: any[] = [];
   loading: boolean = false;
   filtroActual: string = 'Todos'; 
+  mensajeError: string = ''; // Para mostrar error en UI si es necesario
 
   private intervalId: any;
   private http = inject(HttpClient);
   private authService = inject(AuthService);
   private apiUrl = 'http://localhost:5143/api/cocina'; 
 
+  // Headers con Token
   private getHeaders() {
     const token = this.authService.getToken();
     return {
@@ -32,16 +34,31 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.fetchOrdenes();
+    // Iniciamos el polling cada 5 segundos
     this.intervalId = setInterval(() => this.fetchOrdenes(), 5000);
   }
 
   ngOnDestroy() {
-    if (this.intervalId) clearInterval(this.intervalId);
+    this.detenerActualizacionAutomatica();
+  }
+
+  // ✅ NUEVO: Método para detener el bucle si hay error crítico
+  detenerActualizacionAutomatica() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+      console.warn('🔄 Sincronización automática detenida.');
+    }
   }
 
   fetchOrdenes() {
+    // Si ya sabemos que no hay permiso, no intentamos más (protección extra)
+    if (this.mensajeError.includes('permiso')) return;
+
     this.http.get<any[]>(this.apiUrl, this.getHeaders()).subscribe({
       next: (data) => {
+        this.mensajeError = ''; // Limpiar errores previos si conecta bien
+
         // Normalizar estados para evitar problemas de mayúsculas
         data.forEach(orden => {
           if (orden.estado) {
@@ -49,11 +66,26 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
           }
         });
         
+        // Solo actualizamos si la data cambió para evitar parpadeos
         if (JSON.stringify(data) !== JSON.stringify(this.ordenes)) {
           this.ordenes = data;
         }
       },
-      error: (err) => console.error("Error conectando a cocina:", err)
+      error: (err) => {
+        // 🛑 CORRECCIÓN PRINCIPAL AQUÍ
+        if (err.status === 403) {
+          console.error("⛔ ACCESO DENEGADO (403): Deteniendo actualizaciones.");
+          this.mensajeError = 'No tienes permiso para ver la cocina.';
+          this.detenerActualizacionAutomatica(); // <--- ESTO EVITA EL BUCLE INFINITO
+          
+          // Opcional: Mostrar alerta solo una vez
+          if (!this.loading) { // Usamos loading como flag temporal para no spamear alertas
+             alert('⛔ No tienes permisos para acceder al panel de cocina.\n\nEl sistema dejará de intentar conectarse.');
+          }
+        } else {
+          console.error("Error conectando a cocina:", err);
+        }
+      }
     });
   }
 
@@ -93,27 +125,15 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
         this.fetchOrdenes(); 
         this.loading = false;
         
-        // ✅ Mensaje de éxito solo DESPUÉS de procesar exitosamente
+        // ✅ Mensaje de éxito
         if (nuevoEstado === 'EN_PROCESO') {
-          this.mostrarMensajeExito(
-            '✅ Orden en Proceso',
-            'Los ingredientes han sido descontados del inventario correctamente.'
-          );
+          this.mostrarMensajeExito('✅ Orden en Proceso', 'Los ingredientes han sido descontados del inventario.');
         } else if (nuevoEstado === 'LISTO') {
-          this.mostrarMensajeExito(
-            '✅ Orden Lista',
-            'La orden está lista para ser recogida por el mesero.'
-          );
+          this.mostrarMensajeExito('✅ Orden Lista', 'La orden está lista para ser recogida.');
         } else if (nuevoEstado === 'CANCELADO') {
-          this.mostrarMensajeExito(
-            '⚠️ Orden Cancelada',
-            'La orden ha sido cancelada. No se descontó inventario.'
-          );
+          this.mostrarMensajeExito('⚠️ Orden Cancelada', 'La orden ha sido cancelada.');
         } else {
-          this.mostrarMensajeExito(
-            '✅ Estado Actualizado',
-            `La orden #${ordenId} ahora está en estado: ${nuevoEstado}`
-          );
+          this.mostrarMensajeExito('✅ Estado Actualizado', `La orden #${ordenId} ahora está: ${nuevoEstado}`);
         }
       },
       error: (err) => {
@@ -121,25 +141,15 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
         
         // ❌ Manejo detallado de errores
         if (err.error && err.error.message) {
-          const titulo = err.error.message;
-          const detalles = err.error.detalles || '';
-          
-          this.mostrarError(titulo, detalles);
+          this.mostrarError(err.error.message, err.error.detalles || '');
         } else if (err.status === 0) {
-          this.mostrarError(
-            '❌ Error de Conexión',
-            'No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose.'
-          );
-        } else if (err.status === 401) {
-          this.mostrarError(
-            '❌ Sesión Expirada',
-            'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
-          );
+          this.mostrarError('❌ Error de Conexión', 'No se pudo conectar con el servidor.');
+        } else if (err.status === 401 || err.status === 403) {
+           // Si falla al cambiar estado por permisos, también detenemos el polling
+           this.detenerActualizacionAutomatica();
+           this.mostrarError('❌ Sin Permisos', 'Tu sesión expiró o no tienes permiso para realizar esta acción.');
         } else {
-          this.mostrarError(
-            '❌ Error al Actualizar',
-            'Ocurrió un error inesperado. Intenta nuevamente.'
-          );
+          this.mostrarError('❌ Error al Actualizar', 'Ocurrió un error inesperado.');
         }
       }
     });
@@ -147,35 +157,25 @@ export class CocinaPanelComponent implements OnInit, OnDestroy {
 
   // 🆕 MÉTODO AUXILIAR: Mostrar mensaje de éxito
   private mostrarMensajeExito(titulo: string, mensaje: string) {
-    alert(`${titulo}\n\n${mensaje}`);
+    // Usamos setTimeout para asegurar que la UI se actualice antes del alert
+    setTimeout(() => alert(`${titulo}\n\n${mensaje}`), 100);
   }
 
   // 🆕 MÉTODO AUXILIAR: Mostrar error detallado
   private mostrarError(titulo: string, detalles: string) {
+    let msg = titulo;
     if (detalles && detalles.trim() !== '') {
-      // Error con detalles (ej: falta de inventario)
-      alert(
-        `${titulo}\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `${detalles}\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `💡 Sugerencia: Verifica el inventario antes de procesar esta orden.`
-      );
-    } else {
-      // Error simple
-      alert(titulo);
+      msg += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n${detalles}\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n💡 Sugerencia: Verifica el inventario.`;
     }
+    setTimeout(() => alert(msg), 100);
   }
 
   // FUNCIÓN: Notificar al mesero
   notificarMesero(orden: any) {
-    const mensaje = `¡Orden #${orden.id} lista para ${orden.mesero}!`;
-    
+    const mensaje = `¡Orden #${orden.id} lista para ${orden.mesero || 'el mesero'}!`;
     if (confirm(mensaje + '\n\n¿Deseas marcar como notificado?')) {
       console.log('Mesero notificado:', orden.mesero);
-      
-      // Opcional: Cambiar automáticamente a ENTREGADO después de notificar
-      // this.cambiarEstado(orden.id, 'ENTREGADO');
+      // Opcional: Llamada al backend para notificar
     }
   }
 

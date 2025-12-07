@@ -1,75 +1,106 @@
-using System;
-using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace megadeliciasapi.DTOs
 {
-    // DTO usado para listar/mostrar items de inventario
-    public class InventarioItemDto
+    // DTO para listar productos
+    public class ProductoDto
     {
         public int Id { get; set; }
-        public string? Codigo { get; set; }
-        public string Nombre { get; set; } = null!;
-
-        public int StockActual { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public string Categoria { get; set; } = string.Empty;
+        public decimal PrecioUnitario { get; set; }
+        public int Stock { get; set; }
         public int StockMinimo { get; set; }
-        public decimal CostoUnitario { get; set; }
-
-        // Valor calculado (no se mapea a BD)
-        public decimal ValorTotal => StockActual * CostoUnitario;
-
-        public string UnidadMedida { get; set; } = null!;
+        public string? UnidadMedida { get; set; }
         public bool Activo { get; set; }
-        public DateTime CreadoEn { get; set; }
-
-        public int CategoriaId { get; set; }
-        public string? Categoria { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaActualizacion { get; set; }
     }
 
-    // DTO para el formulario de registrar movimiento (entrada/salida)
-    public class RegistrarMovimientoDto
+    // DTO para crear producto
+    public class CrearProductoDto
     {
-        public int ItemId { get; set; }
-        public string Tipo { get; set; } = null!; // "ENTRADA" o "SALIDA"
-        public int Cantidad { get; set; }
+        [Required(ErrorMessage = "El nombre es requerido")]
+        [StringLength(100, ErrorMessage = "El nombre no puede exceder 100 caracteres")]
+        public string Nombre { get; set; } = string.Empty;
 
-        // Opcional: en entradas puede venir el nuevo costo
-        public decimal? CostoUnitario { get; set; }
+        [StringLength(500, ErrorMessage = "La descripción no puede exceder 500 caracteres")]
+        public string? Descripcion { get; set; }
 
-        public string? Motivo { get; set; }
-    }
+        [Required(ErrorMessage = "La categoría es requerida")]
+        [StringLength(50, ErrorMessage = "La categoría no puede exceder 50 caracteres")]
+        public string Categoria { get; set; } = string.Empty;
 
-    // DTO que responde si un plato es factible de preparar
-    public class DisponibilidadPlatoDto
-    {
-        public int PlatoId { get; set; }
-        public bool EstaDisponible { get; set; }
-        public List<string> IngredientesFaltantes { get; set; } = new List<string>();
-    }
+        [Required(ErrorMessage = "El precio unitario es requerido")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
+        public decimal PrecioUnitario { get; set; }
 
-    // DTO para mostrar movimientos en la UI
-    public class MovimientoDto
-    {
-        public int Id { get; set; }
-        public DateTime Fecha { get; set; }
-        public string ItemNombre { get; set; } = null!;
-        public string Tipo { get; set; } = null!;
-        public int Cantidad { get; set; }
-        public decimal CostoUnitario { get; set; }
-        public string Motivo { get; set; } = null!;
-    }
+        [Required(ErrorMessage = "El stock es requerido")]
+        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
+        public int Stock { get; set; }
 
-    // DTO para crear/editar un item (campos opcionales donde aplica)
-    public class CrearItemDto
-    {
-        public string? Codigo { get; set; }
-        public string Nombre { get; set; } = null!;
-        public int CategoriaId { get; set; }
-        public string UnidadMedida { get; set; } = null!;
+        [Required(ErrorMessage = "El stock mínimo es requerido")]
+        [Range(0, int.MaxValue, ErrorMessage = "El stock mínimo no puede ser negativo")]
         public int StockMinimo { get; set; }
 
-        // Opcionales al crear (si no vienen, el controlador puede asignar 0/true)
-        public int? StockActual { get; set; }
-        public decimal? CostoUnitario { get; set; }
-        public bool? Activo { get; set; }
+        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
+        public string? UnidadMedida { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
+
+    // DTO para actualizar producto
+    public class ActualizarProductoDto
+    {
+        [Required(ErrorMessage = "El nombre es requerido")]
+        [StringLength(100, ErrorMessage = "El nombre no puede exceder 100 caracteres")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [StringLength(500, ErrorMessage = "La descripción no puede exceder 500 caracteres")]
+        public string? Descripcion { get; set; }
+
+        [Required(ErrorMessage = "La categoría es requerida")]
+        [StringLength(50, ErrorMessage = "La categoría no puede exceder 50 caracteres")]
+        public string Categoria { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El precio unitario es requerido")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
+        public decimal PrecioUnitario { get; set; }
+
+        [Required(ErrorMessage = "El stock es requerido")]
+        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
+        public int Stock { get; set; }
+
+        [Required(ErrorMessage = "El stock mínimo es requerido")]
+        [Range(0, int.MaxValue, ErrorMessage = "El stock mínimo no puede ser negativo")]
+        public int StockMinimo { get; set; }
+
+        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
+        public string? UnidadMedida { get; set; }
+
+        public bool Activo { get; set; }
+    }
+
+    // DTO para actualizar solo el stock
+    public class ActualizarStockDto
+    {
+        [Required(ErrorMessage = "La cantidad es requerida")]
+        public int Cantidad { get; set; }
+
+        [Required(ErrorMessage = "El tipo de operación es requerido")]
+        [RegularExpression("^(ENTRADA|SALIDA)$", ErrorMessage = "El tipo debe ser ENTRADA o SALIDA")]
+        public string Tipo { get; set; } = string.Empty; // ENTRADA o SALIDA
+
+        [StringLength(200, ErrorMessage = "La razón no puede exceder 200 caracteres")]
+        public string? Razon { get; set; }
+    }
+
+    // DTO para respuestas
+    public class InventarioResponseDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public object? Data { get; set; }
     }
 }

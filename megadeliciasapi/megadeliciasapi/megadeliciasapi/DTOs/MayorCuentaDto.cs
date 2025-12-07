@@ -1,8 +1,8 @@
- using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
- namespace megadeliciasapi.DTOs
+namespace megadeliciasapi.DTOs
 {
- public class MayorCuentaDto
+    public class MayorCuentaDto
     {
         // Para este proyecto trabajamos solo con la cuenta "Caja"
         public string Cuenta { get; set; } = string.Empty;
@@ -11,5 +11,4 @@
         public decimal TotalAbonos { get; set; }
         public decimal SaldoFinal { get; set; }
     }
-    
 }

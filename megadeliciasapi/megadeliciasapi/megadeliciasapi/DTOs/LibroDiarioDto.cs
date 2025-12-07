@@ -1,7 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace  megadeliciasapi.DTOs {
- public class LibroDiarioDto
+namespace megadeliciasapi.DTOs 
+{
+    public class LibroDiarioDto
     {
         public string Desde { get; set; } = string.Empty;
         public string Hasta { get; set; } = string.Empty;
