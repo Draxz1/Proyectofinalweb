@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
-
-// 1. SOLO IMPORTAMOS EL MÓDULO BASE (Sin iconos individuales)
 import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
@@ -13,7 +11,7 @@ import { LucideAngularModule } from 'lucide-angular';
   imports: [
     CommonModule, 
     FormsModule, 
-    LucideAngularModule // 2. IMPORTACIÓN LIMPIA (Sin .pick)
+    LucideAngularModule
   ],
   templateUrl: './mesero-panel.html',
   styleUrl: './mesero-panel.css'
@@ -27,7 +25,7 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
   platos: any[] = [];
   mesas: any[] = [];
   items: any[] = []; 
-  ordenesListas: any[] = []; 
+  ordenesListas: any[] = []; // ✅ Lista de órdenes listas para entregar
   
   // Filtros
   buscar: string = "";
@@ -67,10 +65,10 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
     this.fetchMesas();
     this.fetchOrdenesListas(); 
     
-    // Polling cada 15 segundos
+    // ⚡ Polling cada 10 segundos (más frecuente para notificaciones en tiempo real)
     this.intervalo = setInterval(() => {
       this.fetchOrdenesListas();
-    }, 15000);
+    }, 10000);
   }
 
   ngOnDestroy() {
@@ -126,27 +124,56 @@ export class MeseroPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  // --- ENTREGAS ---
+  // ✅ ENTREGAS - Obtener órdenes listas
   fetchOrdenesListas() {
     this.http.get<any[]>(`${this.apiUrl}/Mesero/ordenes`, this.getHeaders()).subscribe({
       next: (data) => {
-        this.ordenesListas = data.filter(o => o.estado === 'LISTA');
+        console.log('📥 Órdenes recibidas del backend:', data);
+        
+        // ✅ El backend ya filtra por estado "LISTO", solo asignamos directamente
+        this.ordenesListas = data;
+        
+        console.log(`✅ Total de órdenes listas: ${this.ordenesListas.length}`);
         this.cd.detectChanges(); 
       },
-      error: (err) => console.error("Error buscando entregas:", err)
+      error: (err) => {
+        console.error("❌ Error buscando entregas:", err);
+        this.ordenesListas = []; // En caso de error, limpiar la lista
+      }
     });
   }
 
+  // ✅ Marcar orden como entregada
   marcarEntregado(ordenId: number) {
+    // ✅ Mensaje simplificado
+    const confirmar = confirm(`Confirmar entrega de Orden #${ordenId}`);
+    if (!confirmar) return;
+
+    this.loading = true; // Mostrar loading
+
     this.http.post(`${this.apiUrl}/Mesero/entregar/${ordenId}`, {}, this.getHeaders()).subscribe({
       next: () => {
-        this.msg = "✅ Orden entregada y cerrada.";
-        this.fetchOrdenesListas(); 
-        setTimeout(() => this.msg = "", 3000);
+        console.log(`✅ Orden #${ordenId} marcada como entregada`);
+        
+        // ⚡ CRÍTICO: Remover la orden de la lista INMEDIATAMENTE (sin esperar al servidor)
+        this.ordenesListas = this.ordenesListas.filter(o => o.id !== ordenId);
+        
+        // ✅ Actualizar desde el servidor para sincronizar
+        this.fetchOrdenesListas();
+        
+        this.loading = false;
+        this.msg = "✅ Entregada";
+        setTimeout(() => this.msg = "", 2000);
       },
       error: (err) => {
-        console.error(err);
-        this.msg = "❌ Error al marcar entrega.";
+        console.error('❌ Error al marcar entrega:', err);
+        this.loading = false;
+        this.msg = "❌ Error al entregar";
+        
+        // ⚡ Recargar lista en caso de error para sincronizar estado real
+        this.fetchOrdenesListas();
+        
+        setTimeout(() => this.msg = "", 3000);
       }
     });
   }

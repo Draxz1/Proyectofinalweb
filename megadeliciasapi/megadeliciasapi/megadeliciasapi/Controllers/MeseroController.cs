@@ -21,8 +21,8 @@ namespace megadeliciasapi.Controllers
             _context = context;
         }
 
-        // GET: api/mesero/ordenes
-        // Lista las órdenes recientes
+        // ✅ GET: api/mesero/ordenes
+        // DEVUELVE SOLO ÓRDENES EN ESTADO "LISTO" DEL MESERO ACTUAL
         [HttpGet("ordenes")]
         public async Task<IActionResult> ListarOrdenes()
         {
@@ -33,29 +33,33 @@ namespace megadeliciasapi.Controllers
 
             var esAdmin = User.IsInRole("admin");
 
+            // ✅ FILTRO: Solo órdenes en estado "LISTO"
             var query = _context.Ordenes
                 .Include(o => o.Estado)
                 .Include(o => o.Detalles)
-                .ThenInclude(d => d.Plato)
+                    .ThenInclude(d => d.Plato)
+                .Include(o => o.Usuario)
+                .Where(o => o.Estado.Nombre == "LISTO") // ⚡ CRÍTICO: Solo órdenes listas
                 .AsQueryable();
 
+            // Si no es admin, solo ve sus propias órdenes
             if (!esAdmin)
             {
                 query = query.Where(o => o.UsuarioId == userId);
             }
 
             var ordenes = await query
-                .OrderByDescending(o => o.Fecha)
-                .Take(20)
+                .OrderBy(o => o.Fecha) // ⚡ Las más antiguas primero (FIFO)
                 .Select(o => new
                 {
-                    o.Id,
-                    o.Fecha,
-                    Estado = o.Estado != null ? o.Estado.Nombre : "Sin Estado", 
-                    Resumen = string.Join(", ", o.Detalles.Select(d => 
+                    id = o.Id,
+                    fecha = o.Fecha,
+                    estado = o.Estado.Nombre, // ✅ Devuelve "LISTO"
+                    resumen = string.Join(", ", o.Detalles.Select(d => 
                         $"{d.Cantidad}x {(d.Plato != null ? d.Plato.Nombre : "Item eliminado")}"
                     )),
-                    Total = o.TotalOrden
+                    total = o.TotalOrden,
+                    mesaId = o.MesaId
                 })
                 .ToListAsync();
 
@@ -147,33 +151,40 @@ namespace megadeliciasapi.Controllers
             }
         }
 
-        // 👇👇 AQUÍ ESTÁ LO NUEVO QUE NECESITAS 👇👇
-
-        // POST: api/mesero/entregar/{ordenId}
-        // Cambia el estado de LISTA a ENTREGADO para que desaparezca de la alerta
+        // ✅ POST: api/mesero/entregar/{ordenId}
+        // Cambia el estado de LISTO a ENTREGADO
         [HttpPost("entregar/{ordenId}")]
         public async Task<IActionResult> MarcarComoEntregada(int ordenId)
         {
             try 
             {
                 // 1. Buscar la orden
-                var orden = await _context.Ordenes.FindAsync(ordenId);
+                var orden = await _context.Ordenes
+                    .Include(o => o.Estado)
+                    .FirstOrDefaultAsync(o => o.Id == ordenId);
+                    
                 if (orden == null) 
                     return NotFound(new { message = "Orden no encontrada" });
 
-                // 2. Buscar el estado "ENTREGADO"
-                // Asegúrate de que en tu tabla EstadosOrden exista uno con Nombre = 'ENTREGADO'
+                // 2. Verificar que esté en estado LISTO
+                if (orden.Estado.Nombre != "LISTO")
+                    return BadRequest(new { message = "Solo se pueden entregar órdenes en estado LISTO" });
+
+                // 3. Buscar el estado "ENTREGADO"
                 var estadoEntregado = await _context.EstadosOrden
                     .FirstOrDefaultAsync(e => e.Nombre == "ENTREGADO");
                 
                 if (estadoEntregado == null) 
                     return BadRequest(new { message = "Error: El estado 'ENTREGADO' no existe en la base de datos." });
 
-                // 3. Actualizar
+                // 4. Actualizar
                 orden.EstadoId = estadoEntregado.Id;
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Orden marcada como entregada correctamente" });
+                return Ok(new { 
+                    message = "Orden marcada como entregada correctamente",
+                    ordenId = ordenId
+                });
             }
             catch (Exception ex)
             {

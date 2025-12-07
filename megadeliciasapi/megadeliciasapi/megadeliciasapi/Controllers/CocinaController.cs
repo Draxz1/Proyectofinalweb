@@ -4,12 +4,16 @@ using megadeliciasapi.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace megadeliciasapi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "admin,cocinero")]
+    [Authorize]
     public class CocinaController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -22,38 +26,45 @@ namespace megadeliciasapi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTableroCocina()
         {
-            var estadosActivos = new[] { "PENDIENTE", "EN_PROCESO", "LISTO", "ENTREGADO", "CANCELADO" };
+            try 
+            {
+                var estadosActivos = new[] { "PENDIENTE", "EN_PROCESO", "LISTO", "ENTREGADO", "CANCELADO" };
 
-            // Solo mostramos órdenes del día actual para no saturar la vista
-            var hoy = DateTime.Today;
-            var mañana = hoy.AddDays(1);
+                var hoy = DateTime.Today;
+                var mañana = hoy.AddDays(1);
 
-            var ordenes = await _context.Ordenes
-                .Include(o => o.Estado) 
-                .Include(o => o.Detalles)
-                    .ThenInclude(d => d.Plato)
-                .Include(o => o.Usuario)
-                .Where(o => estadosActivos.Contains(o.Estado.Nombre) 
-                         && o.Fecha >= hoy 
-                         && o.Fecha < mañana)
-                .OrderBy(o => o.Fecha) // FIFO (Lo más viejo primero)
-                .Select(o => new
-                {
-                    o.Id,
-                    o.Fecha,
-                    Estado = o.Estado.Nombre,
-                    Mesero = o.Usuario != null ? o.Usuario.Nombre : "Mesero " + o.UsuarioId,
-                    Platos = string.Join(", ", o.Detalles.Select(d => $"{d.Cantidad}x {d.Plato.Nombre}")),
-                    Items = o.Detalles.Select(d => new { 
-                        d.Cantidad, 
-                        Nombre = d.Plato.Nombre, 
-                        Nota = d.NotaPlato 
+                var ordenes = await _context.Ordenes
+                    .Include(o => o.Estado) 
+                    .Include(o => o.Detalles)
+                        .ThenInclude(d => d.Plato)
+                    .Include(o => o.Usuario)
+                    .Where(o => estadosActivos.Contains(o.Estado.Nombre) 
+                             && o.Fecha >= hoy 
+                             && o.Fecha < mañana)
+                    .OrderBy(o => o.Fecha)
+                    .Select(o => new
+                    {
+                        o.Id,
+                        o.Fecha,
+                        Estado = o.Estado.Nombre,
+                        Mesero = o.Usuario != null ? o.Usuario.Nombre : "Mesero " + o.UsuarioId,
+                        Platos = string.Join(", ", o.Detalles.Select(d => $"{d.Cantidad}x {d.Plato.Nombre}")),
+                        Items = o.Detalles.Select(d => new { 
+                            d.Cantidad, 
+                            Nombre = d.Plato.Nombre, 
+                            Nota = d.NotaPlato 
+                        })
                     })
-                })
-                .ToListAsync();
+                    .ToListAsync();
 
-            return Ok(ordenes);
+                return Ok(ordenes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al obtener el tablero", error = ex.Message });
+            }
         }
+
         [HttpGet("historial")]
         public async Task<IActionResult> GetHistorial([FromQuery] int dias = 7)
         {
@@ -98,22 +109,22 @@ namespace megadeliciasapi.Controllers
                 if (orden == null) 
                     return NotFound(new { message = "Orden no encontrada" });
 
+                string estadoSolicitado = dto.Estado.ToUpper().Trim();
+
                 var nuevoEstado = await _context.EstadosOrden
-                    .FirstOrDefaultAsync(e => e.Nombre == dto.Estado);
+                    .FirstOrDefaultAsync(e => e.Nombre == estadoSolicitado);
                 
                 if (nuevoEstado == null) 
-                    return BadRequest(new { message = $"Estado '{dto.Estado}' no válido" });
+                    return BadRequest(new { message = $"Estado '{estadoSolicitado}' no es válido en el sistema." });
 
-                // Validar transiciones de estado
-                if (!EsTransicionValida(orden.Estado.Nombre, dto.Estado))
+                if (!EsTransicionValida(orden.Estado.Nombre, estadoSolicitado))
                 {
                     return BadRequest(new { 
-                        message = $"No se puede cambiar de {orden.Estado.Nombre} a {dto.Estado}" 
+                        message = $"No se puede cambiar de {orden.Estado.Nombre} a {estadoSolicitado}" 
                     });
                 }
 
-                // 🔥 LÓGICA DE INVENTARIO: Si pasa a EN_PROCESO, descontar inventario
-                if (dto.Estado == "EN_PROCESO" && orden.Estado.Nombre == "PENDIENTE")
+                if (estadoSolicitado == "EN_PROCESO" && orden.Estado.Nombre == "PENDIENTE")
                 {
                     var resultadoInventario = await DescontarInventario(orden);
                     if (!resultadoInventario.Exitoso)
@@ -126,21 +137,21 @@ namespace megadeliciasapi.Controllers
                     }
                 }
 
-                // Actualizar estado
                 orden.EstadoId = nuevoEstado.Id;
                 await _context.SaveChangesAsync();
+                
                 await transaction.CommitAsync();
 
                 return Ok(new { 
-                    message = $"Orden #{id} movida a {dto.Estado}",
-                    nuevoEstado = dto.Estado
+                    message = $"Orden #{id} movida a {estadoSolicitado}",
+                    nuevoEstado = estadoSolicitado
                 });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 return StatusCode(500, new { 
-                    message = "Error al actualizar el estado de la orden",
+                    message = "Error crítico al actualizar el estado de la orden",
                     error = ex.Message 
                 });
             }
@@ -152,13 +163,14 @@ namespace megadeliciasapi.Controllers
             {
                 { "PENDIENTE", new[] { "EN_PROCESO", "CANCELADO" } },
                 { "EN_PROCESO", new[] { "LISTO", "CANCELADO" } },
-                { "LISTO", new[] { "ENTREGADO" } },
-                { "ENTREGADO", new string[] { } }, // Estado final
-                { "CANCELADO", new string[] { } }  // Estado final
+                { "LISTO", new[] { "ENTREGADO", "EN_PROCESO" } },
+                { "ENTREGADO", new string[] { } },
+                { "CANCELADO", new string[] { } }
             };
 
-            return transicionesPermitidas.ContainsKey(estadoActual) 
-                && transicionesPermitidas[estadoActual].Contains(nuevoEstado);
+            if (!transicionesPermitidas.ContainsKey(estadoActual)) return false;
+
+            return transicionesPermitidas[estadoActual].Contains(nuevoEstado);
         }
 
         [HttpPost("{id}/notificar")]
@@ -173,12 +185,12 @@ namespace megadeliciasapi.Controllers
                 return NotFound(new { message = "Orden no encontrada" });
 
             if (orden.Estado.Nombre != "LISTO")
-                return BadRequest(new { message = "Solo se pueden notificar órdenes listas" });
+                return BadRequest(new { message = "Solo se pueden notificar órdenes que estén LISTAS" });
             
             Console.WriteLine($"[NOTIFICACIÓN] Orden #{id} lista para {orden.Usuario?.Nombre ?? "Mesero"}");
 
             return Ok(new { 
-                message = $"Notificación enviada a {orden.Usuario?.Nombre ?? "mesero"}",
+                message = $"Notificación enviada a {orden.Usuario?.Nombre ?? "el mesero"}",
                 ordenId = id
             });
         }
@@ -189,7 +201,6 @@ namespace megadeliciasapi.Controllers
 
             foreach (var detalle in orden.Detalles)
             {
-
                 var ingredientes = await _context.PlatoIngredientes
                     .Where(pi => pi.PlatoId == detalle.PlatoId)
                     .Include(pi => pi.InventarioItem)
@@ -197,39 +208,43 @@ namespace megadeliciasapi.Controllers
 
                 if (!ingredientes.Any())
                 {
-                    ingredientesFaltantes.Add($"❌ {detalle.Plato.Nombre} (sin receta configurada)");
                     continue;
                 }
 
                 foreach (var ingrediente in ingredientes)
                 {
-                    if (ingrediente.InventarioItem == null)
+                    if (ingrediente.InventarioItem == null) 
                     {
-                        ingredientesFaltantes.Add($"❌ {detalle.Plato.Nombre} (ingrediente no vinculado en inventario)");
+                        ingredientesFaltantes.Add($"⚠️ Ingrediente no configurado para {detalle.Plato?.Nombre ?? "plato"}");
                         continue;
                     }
 
                     decimal cantidadNecesaria = ingrediente.CantidadUsada * detalle.Cantidad;
                     
-                    if (ingrediente.InventarioItem.StockActual < cantidadNecesaria)
+                    if (ingrediente.InventarioItem.StockActual < (int)Math.Ceiling(cantidadNecesaria))
                     {
                         ingredientesFaltantes.Add(
-                            $"❌ {ingrediente.InventarioItem.Nombre}: Necesitas {cantidadNecesaria} {ingrediente.UnidadMedida}, solo hay {ingrediente.InventarioItem.StockActual}"
+                            $"❌ {ingrediente.InventarioItem.Nombre}: Requiere {cantidadNecesaria} {ingrediente.UnidadMedida}, Stock: {ingrediente.InventarioItem.StockActual}"
                         );
                         continue;
                     }
 
+                    // ⭐ DESCONTAR CON CAST A INT (StockActual es int)
                     ingrediente.InventarioItem.StockActual -= (int)Math.Ceiling(cantidadNecesaria);
 
-                    _context.InventarioMovimientos.Add(new InventarioMovimiento
+                    // Registrar movimiento
+                    var movimiento = new InventarioMovimiento
                     {
                         ItemId = ingrediente.ItemId,
-                        Tipo = "SALIDA",
+                        PlatoIngredienteId = ingrediente.Id,
+                        Tipo = "CONSUMO_COCINA",
                         Cantidad = (int)Math.Ceiling(cantidadNecesaria),
                         CostoUnitario = ingrediente.InventarioItem.CostoUnitario,
-                        Motivo = $"Orden #{orden.Id} - {detalle.Plato.Nombre} (x{detalle.Cantidad})",
+                        Motivo = $"Orden #{orden.Id} - {detalle.Plato?.Nombre ?? "Plato"} x{detalle.Cantidad}",
                         Fecha = DateTime.Now
-                    });
+                    };
+
+                    _context.InventarioMovimientos.Add(movimiento);
                 }
             }
 

@@ -11,7 +11,7 @@ import { DashboardComponent } from './pages/dashboard/dashboard';
 import { MeseroPanelComponent } from './pages/mesero-panel/mesero-panel';
 import { CocinaPanelComponent } from './pages/cocina-panel/cocina-panel';
 import { CajaPanelComponent } from './pages/caja-panel/caja-panel';
-import { InventarioPanelComponent } from './pages/inventario-panel/inventario-panel';
+import { InventarioComponent } from './pages/inventario-panel/inventario-panel'; // ✅ CORRECTO
 import { AdminUsersComponent } from './pages/admin-users/admin-users';
 import { ContabilidadComponent } from './pages/contabilidad/contabilidad';
 
@@ -25,8 +25,6 @@ export const routes: Routes = [
   // ZONA PÚBLICA (Sin Sidebar ni Topbar)
   // ==========================================
   { path: 'login', component: LoginComponent },
-  
-  // 👇 AQUÍ ESTABAN FALTANDO ESTAS RUTAS 👇
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'change-password', component: ChangePasswordComponent },
 
@@ -77,7 +75,7 @@ export const routes: Routes = [
       },
       { 
         path: 'inventario', 
-        component: InventarioPanelComponent, 
+        component: InventarioComponent, // ✅ CORREGIDO (era InventarioPanelComponent)
         canActivate: [roleGuard], 
         data: { roles: ['cocinero', 'cocina'] } 
       },

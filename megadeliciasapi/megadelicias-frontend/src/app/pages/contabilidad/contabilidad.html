@@ -1,328 +1,572 @@
-<div class="p-6 min-h-screen bg-gray-100 font-sans">
+<div class="p-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
 
-  <!-- TÍTULO -->
-  <header class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">
-      Módulo de Contabilidad
-    </h1>
-    <p class="text-sm text-gray-500">
-      Cierre de caja, balance general y resumen de ingresos vs gastos.
-    </p>
+  <!-- HEADER CON KPIs -->
+  <header class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <span class="text-4xl"></span>
+          Módulo de Contabilidad
+        </h1>
+        <p class="text-sm text-gray-500 mt-1">Sistema integral de control financiero y contable</p>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <!-- KPI 1: Total Ventas Hoy -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Ventas Hoy</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">L. {{ totalVentasHoy | number:'1.2-2' }}</p>
+          </div>
+          <div class="bg-green-100 p-3 rounded-full">
+            <span class="text-3xl">📈</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 2: Estado Caja -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Estado Caja</p>
+            <p class="text-2xl font-bold mt-1" [ngClass]="cierreHoy?.cuadro ? 'text-green-600' : 'text-red-600'">
+              {{ cierreHoy?.cuadro ? '✓ Cuadró' : '✗ No cuadró' }}
+            </p>
+          </div>
+          <div class="p-3 rounded-full" [ngClass]="cierreHoy?.cuadro ? 'bg-green-100' : 'bg-red-100'">
+            <span class="text-3xl">{{ cierreHoy?.cuadro ? '✅' : '⚠️' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Diferencia -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Diferencia</p>
+            <p class="text-2xl font-bold mt-1" [ngClass]="(cierreHoy?.diferencia ?? 0) < 0 ? 'text-red-600' : 'text-green-600'">
+              L. {{ cierreHoy?.diferencia | number:'1.2-2' }}
+            </p>
+          </div>
+          <div class="p-3 rounded-full" [ngClass]="(cierreHoy?.diferencia ?? 0) < 0 ? 'bg-red-100' : 'bg-green-100'">
+            <span class="text-3xl">💵</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI 4: Balance -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500 uppercase font-semibold">Activo Total</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">L. {{ balanceGeneral?.activo | number:'1.2-2' }}</p>
+          </div>
+          <div class="bg-indigo-100 p-3 rounded-full">
+            <span class="text-3xl">💼</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <!-- MENSAJES GENERALES -->
-  <div *ngIf="error" class="mb-4 px-4 py-3 rounded-md bg-red-50 text-red-700 border border-red-200 text-sm">
+  <!-- MENSAJES -->
+  <div *ngIf="error" class="mb-4 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm flex items-center gap-2">
+    <span class="text-xl">⚠️</span>
     {{ error }}
   </div>
 
-  <div *ngIf="mensajeOk" class="mb-4 px-4 py-3 rounded-md bg-green-50 text-green-700 border border-green-200 text-sm">
+  <div *ngIf="mensajeOk" class="mb-4 px-4 py-3 rounded-lg bg-green-50 text-green-700 border border-green-200 text-sm flex items-center gap-2">
+    <span class="text-xl">✅</span>
     {{ mensajeOk }}
   </div>
 
-  <!-- GRID PRINCIPAL -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- TABS -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    
+    <!-- Tab Headers -->
+    <div class="border-b border-gray-200 flex overflow-x-auto">
+      <button (click)="cambiarTab('cierre')" 
+              class="px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2"
+              [ngClass]="tabActual === 'cierre' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50'">
+        <span class="text-lg"></span>
+        Cierre de Caja
+      </button>
 
-    <!-- 1. CIERRE DIARIO (HOY) -->
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-lg font-semibold text-gray-800">
-            Cierre diario (hoy)
-          </h2>
-          <p class="text-xs text-gray-500">
-            Resumen de ventas del día de hoy calculado en tiempo real.
-          </p>
-        </div>
+      <button (click)="cambiarTab('ingresos-gastos')" 
+              class="px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2"
+              [ngClass]="tabActual === 'ingresos-gastos' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50'">
+        <span class="text-lg"></span>
+        Ingresos vs Gastos
+      </button>
 
-        <button
-          class="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium"
-          (click)="cargarCierreHoy()"
-          [disabled]="cargandoCierreHoy">
-          Actualizar
-        </button>
-      </div>
+      <button (click)="cambiarTab('balance')" 
+              class="px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2"
+              [ngClass]="tabActual === 'balance' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50'">
+        <span class="text-lg"></span>
+        Balance General
+      </button>
 
-      <div *ngIf="cargandoCierreHoy" class="text-xs text-gray-500">
-        Cargando cierre diario...
-      </div>
+      <button (click)="cambiarTab('libro')" 
+              class="px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2"
+              [ngClass]="tabActual === 'libro' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50'">
+        <span class="text-lg"></span>
+        Libro Diario
+      </button>
 
-      <ng-container *ngIf="!cargandoCierreHoy">
-        <div *ngIf="cierreHoy; else sinCierreHoy" class="text-sm space-y-2">
+      <button (click)="cambiarTab('mayor')" 
+              class="px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2"
+              [ngClass]="tabActual === 'mayor' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50'">
+        <span class="text-lg"></span>
+        Mayor
+      </button>
 
-          <!-- Fila Fecha / Estado -->
-          <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
-            <p>
-              <span class="font-semibold text-gray-600">Fecha:</span>
-              <span class="ml-1">{{ cierreHoy.fecha }}</span>
-            </p>
-            <p>
-              <span class="font-semibold text-gray-600 mr-2">Estado:</span>
-              <span
-                class="px-2 py-0.5 rounded-full text-xs font-semibold"
-                [ngClass]="cierreHoy.cuadro ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                {{ cierreHoy.cuadro ? 'Sí cuadró' : 'No cuadró' }}
-              </span>
-            </p>
-          </div>
-
-          <p><span class="font-semibold text-gray-600">Caja inicial:</span>
-            <span class="ml-1">L. {{ cierreHoy.cajaInicial | number:'1.2-2' }}</span></p>
-          <p><span class="font-semibold text-gray-600">Ventas en efectivo:</span>
-            <span class="ml-1">L. {{ cierreHoy.totalEfectivo | number:'1.2-2' }}</span></p>
-          <p><span class="font-semibold text-gray-600">Ventas en tarjeta:</span>
-            <span class="ml-1">L. {{ cierreHoy.totalTarjeta | number:'1.2-2' }}</span></p>
-          <p><span class="font-semibold text-gray-600">Ventas en transferencia:</span>
-            <span class="ml-1">L. {{ cierreHoy.totalTransferencia | number:'1.2-2' }}</span></p>
-          <p><span class="font-semibold text-gray-600">Efectivo esperado:</span>
-            <span class="ml-1">L. {{ cierreHoy.efectivoEsperado | number:'1.2-2' }}</span></p>
-          <p><span class="font-semibold text-gray-600">Efectivo contado:</span>
-            <span class="ml-1">L. {{ cierreHoy.efectivoContado | number:'1.2-2' }}</span></p>
-          <p><span class="font-semibold text-gray-600">Diferencia:</span>
-            <span class="ml-1">L. {{ cierreHoy.diferencia | number:'1.2-2' }}</span></p>
-        </div>
-
-        <ng-template #sinCierreHoy>
-          <div class="text-xs text-gray-400">
-            No hay datos de cierre para hoy.
-          </div>
-        </ng-template>
-      </ng-container>
-    </section>
-
-        <!-- 2. CIERRE POR FECHA (BUSCAR) -->
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
-      <h2 class="text-lg font-semibold text-gray-800">Cierre por fecha</h2>
-      <p class="text-xs text-gray-500">Busca un cierre ya guardado por fecha.</p>
-
-      <form (ngSubmit)="buscarCierrePorFecha()" class="grid grid-cols-1 gap-3 text-sm">
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Fecha</span>
-          <input
-            type="date"
-            name="fechaBusqueda"
-            [(ngModel)]="fechaBusqueda"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            required />
-        </label>
-
-        <button
-          type="submit"
-          class="mt-1 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium"
-          [disabled]="cargandoBusqueda">
-          {{ cargandoBusqueda ? 'Buscando...' : 'Buscar cierre' }}
-        </button>
-      </form>
-
-      <div class="mt-3">
-        <ng-container *ngIf="cargandoBusqueda">
-          <div class="text-xs text-gray-500">Buscando cierre...</div>
-        </ng-container>
-
-        <ng-container *ngIf="!cargandoBusqueda">
-          <div *ngIf="cierreBuscado; else sinCierreBuscado" class="text-sm space-y-2">
-            <div class="flex justify-between items-center border-b border-gray-100 pb-2 mb-2">
-              <p>
-                <span class="font-semibold text-gray-600">Fecha:</span>
-                <span class="ml-1">{{ cierreBuscado.fecha }}</span>
-              </p>
-              <p>
-                <span class="font-semibold text-gray-600 mr-2">Estado:</span>
-                <span
-                  class="px-2 py-0.5 rounded-full text-xs font-semibold"
-                  [ngClass]="cierreBuscado.cuadro ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                  {{ cierreBuscado.cuadro ? 'Sí cuadró' : 'No cuadró' }}
-                </span>
-              </p>
-            </div>
-
-            <p><span class="font-semibold text-gray-600">Caja inicial:</span>
-              <span class="ml-1">L. {{ cierreBuscado.cajaInicial | number:'1.2-2' }}</span></p>
-            <p><span class="font-semibold text-gray-600">Ventas en efectivo:</span>
-              <span class="ml-1">L. {{ cierreBuscado.totalEfectivo | number:'1.2-2' }}</span></p>
-            <p><span class="font-semibold text-gray-600">Ventas en tarjeta:</span>
-              <span class="ml-1">L. {{ cierreBuscado.totalTarjeta | number:'1.2-2' }}</span></p>
-            <p><span class="font-semibold text-gray-600">Ventas en transferencia:</span>
-              <span class="ml-1">L. {{ cierreBuscado.totalTransferencia | number:'1.2-2' }}</span></p>
-            <p><span class="font-semibold text-gray-600">Efectivo esperado:</span>
-              <span class="ml-1">L. {{ cierreBuscado.efectivoEsperado | number:'1.2-2' }}</span></p>
-            <p><span class="font-semibold text-gray-600">Efectivo contado:</span>
-              <span class="ml-1">L. {{ cierreBuscado.efectivoContado | number:'1.2-2' }}</span></p>
-            <p><span class="font-semibold text-gray-600">Diferencia:</span>
-              <span class="ml-1">L. {{ cierreBuscado.diferencia | number:'1.2-2' }}</span></p>
-          </div>
-
-          <ng-template #sinCierreBuscado>
-            <div class="text-xs text-gray-400">No se encontró cierre para la fecha seleccionada.</div>
-          </ng-template>
-        </ng-container>
-      </div>
-    </section>
-
-    <!-- 3. CREAR CIERRE (único formulario de creación) -->
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
-      <h2 class="text-lg font-semibold text-gray-800">Crear cierre de caja</h2>
-      <p class="text-xs text-gray-500">Registra el cierre del día actual.</p>
-
-      <form (ngSubmit)="crearCierre()" class="grid grid-cols-1 gap-3 text-sm">
-        <!-- Fecha solo lectura -->
-        <div class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Fecha del cierre</span>
-          <span class="px-3 py-2 rounded-md bg-gray-100 border border-gray-200 text-sm text-gray-700">
-            {{ crearCierreFecha }}
-          </span>
-        </div>
-
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Caja inicial</span>
-          <input
-            type="number"
-            name="crearCierreCajaInicial"
-            [(ngModel)]="crearCierreCajaInicial"
-            min="0"
-            step="0.01"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            required />
-        </label>
-
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Efectivo contado</span>
-          <input
-            type="number"
-            name="crearCierreEfectivoContado"
-            [(ngModel)]="crearCierreEfectivoContado"
-            min="0"
-            step="0.01"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            required />
-        </label>
-
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Observaciones (opcional)</span>
-          <textarea
-            name="crearCierreObservaciones"
-            [(ngModel)]="crearCierreObservaciones"
-            rows="3"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"></textarea>
-        </label>
-
-        <button
-          type="submit"
-          class="mt-1 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
-          [disabled]="guardandoCierre">
-          {{ guardandoCierre ? 'Guardando...' : 'Crear cierre' }}
-        </button>
-      </form>
-    </section>
-
-
-    <!-- 4. RESUMEN INGRESOS VS GASTOS -->
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
-  <h2 class="text-lg font-semibold text-gray-800">
-    Resumen ingresos vs gastos
-  </h2>
-  <p class="text-xs text-gray-500">
-    Compara los ingresos registrados en caja con los gastos del día.
-  </p>
-
-  <form (ngSubmit)="calcularResumenIngresosGastos()" class="grid grid-cols-1 gap-3 text-sm">
-
-    <!-- Fecha solo lectura (el día del resumen, normalmente hoy) -->
-    <div class="flex flex-col gap-1">
-      <span class="text-xs text-gray-600">Fecha</span>
-      <span class="px-3 py-2 rounded-md bg-gray-100 border border-gray-200 text-sm text-gray-700">
-        {{ resumenFecha }}
-      </span>
+      <button (click)="cambiarTab('balanza')" 
+              class="px-6 py-4 text-sm font-semibold transition-colors whitespace-nowrap flex items-center gap-2"
+              [ngClass]="tabActual === 'balanza' ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600' : 'text-gray-600 hover:bg-gray-50'">
+        <span class="text-lg"></span>
+        Balanza
+      </button>
     </div>
 
-    <label class="flex flex-col gap-1">
-      <span class="text-xs text-gray-600">Total de gastos</span>
-      <input
-        type="number"
-        name="resumenGastos"
-        [(ngModel)]="resumenGastos"
-        min="0"
-        step="0.01"
-        class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-        required />
-    </label>
+    <!-- Tab Content -->
+    <div class="p-6">
 
-    <button
-      type="submit"
-      class="mt-1 px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium"
-      [disabled]="cargandoResumen">
-      {{ cargandoResumen ? 'Calculando...' : 'Calcular resumen' }}
-    </button>
-  </form>
+      <!-- TAB: CIERRE DE CAJA -->
+      <div *ngIf="tabActual === 'cierre'">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Cierre Diario (HOY) -->
+          <div class="bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-200 p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-bold text-gray-900">Cierre Diario (Hoy)</h3>
+              <button (click)="cargarCierreHoy()" 
+                      class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold"
+                      [disabled]="cargandoCierreHoy">
+                {{ cargandoCierreHoy ? 'Cargando...' : 'Actualizar' }}
+              </button>
+            </div>
 
-  <div *ngIf="resumenIngresosGastos" class="mt-3 text-sm space-y-1">
-    <p><strong>Fecha:</strong> {{ resumenIngresosGastos.fecha }}</p>
-    <p><strong>Total ingresos (día):</strong> L. {{ resumenIngresosGastos.totalIngresos | number:'1.2-2' }}</p>
-    <p><strong>Total gastos (día):</strong> L. {{ resumenIngresosGastos.totalGastos | number:'1.2-2' }}</p>
-    <p><strong>Resultado:</strong> L. {{ resumenIngresosGastos.resultado | number:'1.2-2' }}</p>
-    <p>
-      <strong>Estado:</strong>
-      <span
-        [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'">
-        {{ resumenIngresosGastos.estaEnNegativo ? 'En negativo' : 'En positivo' }}
-      </span>
-    </p>
-  </div>
-</section>
+            <div *ngIf="cierreHoy" class="space-y-3 text-sm">
+              <div class="flex justify-between py-2 border-b border-gray-200">
+                <span class="text-gray-600">Fecha:</span>
+                <span class="font-semibold">{{ cierreHoy.fecha }}</span>
+              </div>
+              <div class="flex justify-between py-2">
+                <span class="text-gray-600">Caja inicial:</span>
+                <span class="font-semibold">L. {{ cierreHoy.cajaInicial | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between py-2 bg-green-50 px-2 rounded">
+                <span class="text-gray-600">Efectivo:</span>
+                <span class="font-bold text-green-700">L. {{ cierreHoy.totalEfectivo | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between py-2 bg-blue-50 px-2 rounded">
+                <span class="text-gray-600">Tarjeta:</span>
+                <span class="font-bold text-blue-700">L. {{ cierreHoy.totalTarjeta | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between py-2 bg-purple-50 px-2 rounded">
+                <span class="text-gray-600">Transferencia:</span>
+                <span class="font-bold text-purple-700">L. {{ cierreHoy.totalTransferencia | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between py-2 border-t-2 border-gray-300 pt-3">
+                <span class="text-gray-900 font-semibold">Efectivo esperado:</span>
+                <span class="font-bold text-gray-900">L. {{ cierreHoy.efectivoEsperado | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between py-2">
+                <span class="text-gray-900 font-semibold">Efectivo contado:</span>
+                <span class="font-bold text-gray-900">L. {{ cierreHoy.efectivoContado | number:'1.2-2' }}</span>
+              </div>
+              <div class="flex justify-between py-2 border-t-2 border-gray-300 pt-3">
+                <span class="text-gray-900 font-bold">Diferencia:</span>
+                <span class="font-bold text-xl" [ngClass]="cierreHoy.diferencia < 0 ? 'text-red-600' : 'text-green-600'">
+                  L. {{ cierreHoy.diferencia | number:'1.2-2' }}
+                </span>
+              </div>
+              <div class="mt-4 p-3 rounded-lg" [ngClass]="cierreHoy.cuadro ? 'bg-green-100' : 'bg-red-100'">
+                <p class="text-center font-bold" [ngClass]="cierreHoy.cuadro ? 'text-green-700' : 'text-red-700'">
+                  {{ cierreHoy.cuadro ? '✓ CAJA CUADRADA' : '✗ CAJA DESCUADRADA' }}
+                </p>
+              </div>
+            </div>
+          </div>
 
+          <!-- Crear Cierre -->
+          <div class="bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-200 p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Crear Cierre de Caja</h3>
+            <form (ngSubmit)="crearCierre()" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Fecha del cierre</label>
+                <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700">
+                  {{ crearCierreFecha }}
+                </div>
+              </div>
 
-    <!-- 5. BALANCE GENERAL -->
-    <section class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 flex flex-col gap-4">
-      <h2 class="text-lg font-semibold text-gray-800">
-        Balance general
-      </h2>
-      <p class="text-xs text-gray-500">
-        Activo, pasivo y patrimonio neto a una fecha de corte.
-      </p>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Caja Inicial (L.)</label>
+                <input type="number" 
+                       [(ngModel)]="crearCierreCajaInicial" 
+                       name="cajaInicial"
+                       min="0" 
+                       step="0.01"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                       required>
+              </div>
 
-      <form (ngSubmit)="cargarBalanceGeneral()" class="flex items-end gap-3 text-sm">
-        <label class="flex flex-col gap-1">
-          <span class="text-xs text-gray-600">Fecha de corte</span>
-          <input
-            type="date"
-            name="fechaBalance"
-            [(ngModel)]="fechaBalance"
-            class="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            required />
-        </label>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Efectivo Contado (L.)</label>
+                <input type="number" 
+                       [(ngModel)]="crearCierreEfectivoContado" 
+                       name="efectivoContado"
+                       min="0" 
+                       step="0.01"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                       required>
+              </div>
 
-        <button
-          type="submit"
-          class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium"
-          [disabled]="cargandoBalance">
-          {{ cargandoBalance ? 'Calculando...' : 'Calcular balance' }}
-        </button>
-      </form>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Observaciones</label>
+                <textarea [(ngModel)]="crearCierreObservaciones" 
+                          name="observaciones"
+                          rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"></textarea>
+              </div>
 
-      <div *ngIf="balanceGeneral" class="mt-3 text-sm space-y-1">
-        <p><strong>Fecha de corte:</strong> {{ balanceGeneral.fechaCorte }}</p>
+              <button type="submit" 
+                      class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition shadow-lg"
+                      [disabled]="guardandoCierre">
+                {{ guardandoCierre ? 'Guardando...' : 'Crear Cierre' }}
+              </button>
+            </form>
+          </div>
 
-        <h3 class="mt-2 font-semibold text-gray-700">Activo</h3>
-        <p>Activo total: L. {{ balanceGeneral.activo | number:'1.2-2' }}</p>
+          <!-- Buscar Cierre por Fecha -->
+          <div class="lg:col-span-2 bg-gradient-to-br from-blue-50 to-white rounded-xl border border-blue-200 p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Buscar Cierre por Fecha</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Selecciona una fecha</label>
+                <input type="date" 
+                       [(ngModel)]="fechaBusqueda"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div class="flex items-end">
+                <button (click)="buscarCierrePorFecha()"
+                        class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
+                        [disabled]="cargandoBusqueda">
+                  {{ cargandoBusqueda ? 'Buscando...' : 'Buscar' }}
+                </button>
+              </div>
+            </div>
 
-        <h3 class="mt-2 font-semibold text-gray-700">Pasivo</h3>
-        <p>Pasivo total: L. {{ balanceGeneral.pasivo | number:'1.2-2' }}</p>
+            <div *ngIf="cierreBuscado" class="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p class="text-gray-500 text-xs">Fecha</p>
+                  <p class="font-bold">{{ cierreBuscado.fecha }}</p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-xs">Total Efectivo</p>
+                  <p class="font-bold text-green-600">L. {{ cierreBuscado.totalEfectivo | number:'1.2-2' }}</p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-xs">Diferencia</p>
+                  <p class="font-bold" [ngClass]="cierreBuscado.diferencia < 0 ? 'text-red-600' : 'text-green-600'">
+                    L. {{ cierreBuscado.diferencia | number:'1.2-2' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-gray-500 text-xs">Estado</p>
+                  <p class="font-bold" [ngClass]="cierreBuscado.cuadro ? 'text-green-600' : 'text-red-600'">
+                    {{ cierreBuscado.cuadro ? '✓ Cuadró' : '✗ No cuadró' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <h3 class="mt-2 font-semibold text-gray-700">Patrimonio neto</h3>
-        <p>Patrimonio neto: L. {{ balanceGeneral.patrimonioNeto | number:'1.2-2' }}</p>
-
-        <div class="mt-2 border-t border-gray-200 pt-2">
-          <p><strong>Total Activos:</strong> L. {{ balanceGeneral.totalActivos | number:'1.2-2' }}</p>
-          <p><strong>Total Pasivo + Patrimonio:</strong> L. {{ balanceGeneral.totalPasivoPatrimonio | number:'1.2-2' }}</p>
-          <p>
-            <strong>Estado:</strong>
-            <span
-              [ngClass]="balanceGeneral.cuadra ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'">
-              {{ balanceGeneral.cuadra ? 'Sí cuadra (A = P + PN)' : 'No cuadra' }}
-            </span>
-          </p>
         </div>
       </div>
-    </section>
 
+      <!-- TAB: INGRESOS VS GASTOS -->
+      <div *ngIf="tabActual === 'ingresos-gastos'">
+        <div class="max-w-2xl mx-auto">
+          <div class="bg-gradient-to-br from-purple-50 to-white rounded-xl border border-purple-200 p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-6">Comparación Ingresos vs Gastos</h3>
+            
+            <form (ngSubmit)="calcularResumenIngresosGastos()" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Fecha</label>
+                <div class="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700">
+                  {{ resumenFecha }}
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Total de Gastos (L.)</label>
+                <input type="number" 
+                       [(ngModel)]="resumenGastos"
+                       name="gastos"
+                       min="0" 
+                       step="0.01"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                       required>
+              </div>
+
+              <button type="submit" 
+                      class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg"
+                      [disabled]="cargandoResumen">
+                {{ cargandoResumen ? 'Calculando...' : 'Calcular Resumen' }}
+              </button>
+            </form>
+
+            <div *ngIf="resumenIngresosGastos" class="mt-6 p-6 bg-white rounded-lg border-2 border-gray-200">
+              <div class="grid grid-cols-2 gap-6 mb-6">
+                <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <p class="text-xs text-gray-600 uppercase font-semibold mb-1">Ingresos</p>
+                  <p class="text-2xl font-bold text-green-600">L. {{ resumenIngresosGastos.totalIngresos | number:'1.2-2' }}</p>
+                </div>
+                <div class="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                  <p class="text-xs text-gray-600 uppercase font-semibold mb-1">Gastos</p>
+                  <p class="text-2xl font-bold text-red-600">L. {{ resumenIngresosGastos.totalGastos | number:'1.2-2' }}</p>
+                </div>
+              </div>
+
+              <div class="text-center p-6 rounded-lg" 
+                   [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'bg-red-100 border-2 border-red-300' : 'bg-green-100 border-2 border-green-300'">
+                <p class="text-xs uppercase font-semibold mb-2" 
+                   [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'text-red-700' : 'text-green-700'">
+                  Resultado
+                </p>
+                <p class="text-4xl font-bold" 
+                   [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'text-red-700' : 'text-green-700'">
+                  L. {{ resumenIngresosGastos.resultado | number:'1.2-2' }}
+                </p>
+                <p class="mt-2 font-semibold" 
+                   [ngClass]="resumenIngresosGastos.estaEnNegativo ? 'text-red-700' : 'text-green-700'">
+                  {{ resumenIngresosGastos.estaEnNegativo ? '⚠ PÉRDIDA' : '✓ GANANCIA' }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: BALANCE GENERAL -->
+      <div *ngIf="tabActual === 'balance'">
+        <div class="max-w-4xl mx-auto">
+          <div class="bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 p-6">
+            <div class="flex justify-between items-center mb-6">
+              <h3 class="text-lg font-bold text-gray-900">Balance General</h3>
+              <div class="flex gap-3">
+                <input type="date" 
+                       [(ngModel)]="fechaBalance"
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <button (click)="cargarBalanceGeneral()"
+                        class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-lg"
+                        [disabled]="cargandoBalance">
+                  {{ cargandoBalance ? 'Calculando...' : 'Calcular' }}
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="balanceGeneral" class="space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                  <p class="text-xs text-gray-600 uppercase font-semibold mb-2">Activo</p>
+                  <p class="text-2xl font-bold text-blue-700">L. {{ balanceGeneral.activo | number:'1.2-2' }}</p>
+                </div>
+                <div class="p-4 bg-red-50 rounded-lg border border-red-200 text-center">
+                  <p class="text-xs text-gray-600 uppercase font-semibold mb-2">Pasivo</p>
+                  <p class="text-2xl font-bold text-red-700">L. {{ balanceGeneral.pasivo | number:'1.2-2' }}</p>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg border border-green-200 text-center">
+                  <p class="text-xs text-gray-600 uppercase font-semibold mb-2">Patrimonio</p>
+                  <p class="text-2xl font-bold text-green-700">L. {{ balanceGeneral.patrimonioNeto | number:'1.2-2' }}</p>
+                </div>
+              </div>
+
+              <div class="p-6 bg-white rounded-lg border-2 border-gray-300">
+                <h4 class="font-bold text-gray-900 mb-4">Ecuación Contable</h4>
+                <div class="flex items-center justify-center gap-4 text-xl font-semibold">
+                  <span class="text-blue-700">Activo</span>
+                  <span class="text-gray-400">=</span>
+                  <span class="text-red-700">Pasivo</span>
+                  <span class="text-gray-400">+</span>
+                  <span class="text-green-700">Patrimonio</span>
+                </div>
+                <div class="mt-4 p-4 rounded-lg text-center" 
+                     [ngClass]="balanceGeneral.cuadra ? 'bg-green-100 border-2 border-green-300' : 'bg-red-100 border-2 border-red-300'">
+                  <p class="font-bold" [ngClass]="balanceGeneral.cuadra ? 'text-green-700' : 'text-red-700'">
+                    {{ balanceGeneral.cuadra ? '✓ LA ECUACIÓN CUADRA' : '✗ LA ECUACIÓN NO CUADRA' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: LIBRO DIARIO -->
+      <div *ngIf="tabActual === 'libro'">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Libro Diario</h3>
+            <div class="flex gap-3">
+              <input type="date" [(ngModel)]="libroDesde" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <input type="date" [(ngModel)]="libroHasta" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <button (click)="cargarLibroDiario()"
+                      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg"
+                      [disabled]="cargandoLibro">
+                {{ cargandoLibro ? 'Cargando...' : 'Generar' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="libroDiario" class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+                  <th class="px-4 py-3 text-left font-semibold">Tipo</th>
+                  <th class="px-4 py-3 text-right font-semibold">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let mov of libroDiario.movimientos" class="border-b border-gray-200 hover:bg-gray-50">
+                  <td class="px-4 py-3">{{ mov.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-1 rounded-full text-xs font-semibold"
+                          [ngClass]="mov.tipo === 'INGRESO' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                      {{ mov.tipo }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right font-semibold" 
+                      [ngClass]="mov.tipo === 'INGRESO' ? 'text-green-600' : 'text-red-600'">
+                    L. {{ mov.monto | number:'1.2-2' }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-100 font-bold">
+                <tr>
+                  <td colspan="2" class="px-4 py-3 text-right">Total Cargos (Egresos):</td>
+                  <td class="px-4 py-3 text-right text-red-600">L. {{ libroDiario.totalCargos | number:'1.2-2' }}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" class="px-4 py-3 text-right">Total Abonos (Ingresos):</td>
+                  <td class="px-4 py-3 text-right text-green-600">L. {{ libroDiario.totalAbonos | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: MAYOR -->
+      <div *ngIf="tabActual === 'mayor'">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Mayor - Cuenta: Caja</h3>
+            <div class="flex gap-3">
+              <input type="date" [(ngModel)]="mayorDesde" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <input type="date" [(ngModel)]="mayorHasta" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <button (click)="cargarMayor()"
+                      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg"
+                      [disabled]="cargandoMayor">
+                {{ cargandoMayor ? 'Cargando...' : 'Generar' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="mayor" class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+                  <th class="px-4 py-3 text-right font-semibold">Cargo (Egreso)</th>
+                  <th class="px-4 py-3 text-right font-semibold">Abono (Ingreso)</th>
+                  <th class="px-4 py-3 text-right font-semibold">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let mov of mayor.movimientos" class="border-b border-gray-200 hover:bg-gray-50">
+                  <td class="px-4 py-3">{{ mov.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+                  <td class="px-4 py-3 text-right" [ngClass]="mov.cargo > 0 ? 'text-red-600 font-semibold' : 'text-gray-400'">
+                    {{ mov.cargo > 0 ? (mov.cargo | number:'1.2-2') : '—' }}
+                  </td>
+                  <td class="px-4 py-3 text-right" [ngClass]="mov.abono > 0 ? 'text-green-600 font-semibold' : 'text-gray-400'">
+                    {{ mov.abono > 0 ? (mov.abono | number:'1.2-2') : '—' }}
+                  </td>
+                  <td class="px-4 py-3 text-right font-bold" [ngClass]="mov.saldo >= 0 ? 'text-blue-600' : 'text-red-600'">
+                    L. {{ mov.saldo | number:'1.2-2' }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-100 font-bold">
+                <tr>
+                  <td class="px-4 py-3 text-right">TOTALES:</td>
+                  <td class="px-4 py-3 text-right text-red-600">L. {{ mayor.totalCargos | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right text-green-600">L. {{ mayor.totalAbonos | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right text-blue-600">L. {{ mayor.saldoFinal | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: BALANZA DE COMPROBACIÓN -->
+      <div *ngIf="tabActual === 'balanza'">
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Balanza de Comprobación</h3>
+            <div class="flex gap-3">
+              <input type="date" [(ngModel)]="balanzaDesde" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <input type="date" [(ngModel)]="balanzaHasta" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <button (click)="cargarBalanza()"
+                      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg"
+                      [disabled]="cargandoBalanza">
+                {{ cargandoBalanza ? 'Cargando...' : 'Generar' }}
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="balanzaComprobacion" class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Cuenta</th>
+                  <th class="px-4 py-3 text-right font-semibold">Cargos</th>
+                  <th class="px-4 py-3 text-right font-semibold">Abonos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let cuenta of balanzaComprobacion.cuentas" class="border-b border-gray-200 hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">{{ cuenta.cuenta }}</td>
+                  <td class="px-4 py-3 text-right text-red-600 font-semibold">L. {{ cuenta.totalCargos | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right text-green-600 font-semibold">L. {{ cuenta.totalAbonos | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-gray-100 font-bold">
+                <tr>
+                  <td class="px-4 py-3 text-right">TOTALES:</td>
+                  <td class="px-4 py-3 text-right text-red-600">L. {{ balanzaComprobacion.totalCargos | number:'1.2-2' }}</td>
+                  <td class="px-4 py-3 text-right text-green-600">L. {{ balanzaComprobacion.totalAbonos | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="mt-6 p-4 rounded-lg text-center" 
+                 [ngClass]="balanzaComprobacion.cuadra ? 'bg-green-100 border-2 border-green-300' : 'bg-red-100 border-2 border-red-300'">
+              <p class="font-bold" [ngClass]="balanzaComprobacion.cuadra ? 'text-green-700' : 'text-red-700'">
+                {{ balanzaComprobacion.cuadra ? '✓ LA BALANZA CUADRA (Cargos = Abonos)' : '✗ LA BALANZA NO CUADRA' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>

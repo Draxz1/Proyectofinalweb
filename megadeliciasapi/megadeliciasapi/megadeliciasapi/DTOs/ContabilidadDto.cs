@@ -6,7 +6,6 @@ namespace megadeliciasapi.DTOs
     // 1. CIERRE DIARIO / POR FECHA
     // ==========================
     
-    // ===== CIERRE CAJA =====
     public class CierreResumenDto
     {
         public string Fecha { get; set; } = string.Empty;
@@ -41,7 +40,10 @@ namespace megadeliciasapi.DTOs
         public string? Observaciones { get; set; }
     }
 
-    // ===== INGRESOS vs GASTOS =====
+    // ==========================
+    // 2. INGRESOS vs GASTOS
+    // ==========================
+    
     public class IngresosGastosDto
     {
         public string Fecha { get; set; } = string.Empty;
@@ -52,7 +54,10 @@ namespace megadeliciasapi.DTOs
         public bool EstaEnNegativo { get; set; }
     }
 
-    // ===== BALANCE GENERAL =====
+    // ==========================
+    // 3. BALANCE GENERAL
+    // ==========================
+    
     public class BalanceGeneralDto
     {
         public string FechaCorte { get; set; } = string.Empty;
@@ -66,7 +71,4 @@ namespace megadeliciasapi.DTOs
 
         public bool Cuadra { get; set; }
     }
-
-    // NOTA: Se eliminaron LibroDiarioMovimientoDto, MayorMovimientoDto, 
-    // BalanzaComprobacionDto, etc. porque ya tienen sus propios archivos .cs
 }

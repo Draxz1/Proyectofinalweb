@@ -356,6 +356,9 @@ public async Task<ActionResult<IngresosGastosDto>> GetResumenIngresosGastos(
 // ==========================
 // GET: api/Contabilidad/libro-diario?desde=2025-11-01&hasta=2025-11-30
 // Si no se envían fechas, toma solo el día de hoy.
+// ==========================
+// 6. LIBRO DIARIO
+// ==========================
 [HttpGet("libro-diario")]
 public async Task<ActionResult<LibroDiarioDto>> GetLibroDiario(
     [FromQuery] DateTime? desde,
@@ -379,7 +382,6 @@ public async Task<ActionResult<LibroDiarioDto>> GetLibroDiario(
         Monto = m.Monto
     }).ToList();
 
-    // cargos = egresos, abonos = ingresos
     decimal totalCargos = movimientos
         .Where(m => m.Tipo == "EGRESO")
         .Sum(m => m.Monto);
