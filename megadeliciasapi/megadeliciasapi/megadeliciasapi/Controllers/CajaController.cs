@@ -32,49 +32,46 @@ namespace megadeliciasapi.Controllers
 
         // 2. OBTENER MOVIMIENTOS
         [HttpGet("movimientos")]
-public async Task<IActionResult> GetMovimientos()
-{
-    try
-    {
-        var movimientos = await _context.MovimientosCaja
-            .OrderByDescending(m => m.Fecha)
-            .Take(50)
-            .Select(m => new MovimientoResponseDto
+        public async Task<IActionResult> GetMovimientos()
+        {
+            try
             {
-                Id = m.Id,
-                UsuarioId = m.UsuarioId,
-                UsuarioNombre = m.Usuario != null ? m.Usuario.Nombre : null,
-                Tipo = m.Tipo,
-                Monto = m.Monto,
-                MetodoPagoId = m.MetodoPagoId,
-                MetodoPagoNombre = m.MetodoPago != null ? m.MetodoPago.Nombre : null,
-                Descripcion = m.Descripcion,
-                PagoId = m.PagoId,
-                Fecha = m.Fecha,
-                CierreId = m.CierreId
-            })
-            .ToListAsync();
+                var movimientos = await _context.MovimientosCaja
+                    .OrderByDescending(m => m.Fecha)
+                    .Take(50)
+                    .Select(m => new MovimientoResponseDto
+                    {
+                        Id = m.Id,
+                        UsuarioId = m.UsuarioId,
+                        UsuarioNombre = m.Usuario != null ? m.Usuario.Nombre : null,
+                        Tipo = m.Tipo,
+                        Monto = m.Monto,
+                        MetodoPagoId = m.MetodoPagoId,
+                        MetodoPagoNombre = m.MetodoPago != null ? m.MetodoPago.Nombre : null,
+                        Descripcion = m.Descripcion,
+                        PagoId = m.PagoId,
+                        Fecha = m.Fecha,
+                        CierreId = m.CierreId
+                    })
+                    .ToListAsync();
 
-        return Ok(movimientos);
-    }
-    catch (Exception ex)
-    {
-        // Loguear completo para desarrollo
-        Console.WriteLine("ERROR GetMovimientos: " + ex.ToString());
-        return StatusCode(500, new { message = "Error interno GetMovimientos", detail = ex.Message });
-    }
-}
-
+                return Ok(movimientos);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ERROR GetMovimientos: " + ex.ToString());
+                return StatusCode(500, new { message = "Error interno GetMovimientos", detail = ex.Message });
+            }
+        }
 
         // 3. OBTENER ÓRDENES PENDIENTES DE PAGO 
         [HttpGet("ordenes-pendientes")]
         public async Task<IActionResult> GetOrdenesPendientes()
         {
-            // ✅ Mostrar todas las órdenes sin venta (no pagadas)
             var ordenes = await _context.Ordenes
-                .Where(o => o.Venta == null) // Solo órdenes sin venta
+                .Where(o => o.Venta == null)
                 .Include(o => o.Estado)
-                .Include(o => o.Usuario) // ✅ CRÍTICO: Incluir usuario
+                .Include(o => o.Usuario)
                 .OrderByDescending(o => o.Fecha)
                 .Select(o => new
                 {
@@ -92,199 +89,213 @@ public async Task<IActionResult> GetMovimientos()
 
         // 4. OBTENER MÉTODOS DE PAGO
         [HttpGet("metodos-pago")]
-        [AllowAnonymous] 
+        [AllowAnonymous]
         public async Task<IActionResult> GetMetodosPago()
         {
             var metodos = await _context.MetodosPago
                 .Select(m => new { m.Id, m.Nombre })
                 .ToListAsync();
 
-            
             return Ok(metodos);
         }
 
-        // 5. ✅ REGISTRAR PAGO DE UNA ORDEN (CORREGIDO)
+        // 5. REGISTRAR PAGO DE UNA ORDEN
         [HttpPost("ordenes/{id}/pagar")]
-public async Task<IActionResult> RegistrarPago(int id, [FromBody] RegistrarPagoDto dto)
-{
-    // Validaciones básicas del DTO
-    if (dto == null) return BadRequest(new { message = "Datos de pago inválidos" });
-
-    try
-    {
-        // 1) Obtener la orden y validar existencia / no pagada
-        var orden = await _context.Ordenes
-            .Include(o => o.Estado)
-            .Include(o => o.Usuario)
-            .FirstOrDefaultAsync(o => o.Id == id);
-
-        if (orden == null)
-            return NotFound(new { message = "Orden no encontrada" });
-
-        if (orden.Venta != null)
-            return BadRequest(new { message = "Esta orden ya fue pagada" });
-
-        // 2) Validar método de pago
-        var metodoPago = await _context.MetodosPago.FirstOrDefaultAsync(m => m.Id == dto.MetodoPagoId);
-        if (metodoPago == null)
-            return BadRequest(new { message = "Método de pago no válido o inactivo" });
-
-        // 3) Validar monto
-        if (dto.Monto <= 0)
-            return BadRequest(new { message = "El monto debe ser mayor a 0" });
-
-        if (dto.Monto != orden.TotalOrden)
-            return BadRequest(new { message = $"El monto ({dto.Monto}) no coincide con el total de la orden ({orden.TotalOrden})" });
-
-        // 4) Obtener usuario actual del token JWT
-        var usuarioIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(usuarioIdClaim))
-            return Unauthorized(new { message = "Usuario no autenticado" });
-        var usuarioId = int.Parse(usuarioIdClaim);
-
-        // 5) Iniciar transacción para mantener consistencia
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-
-        // 6) Crear Venta
-        var venta = new Venta
+        public async Task<IActionResult> RegistrarPago(int id, [FromBody] RegistrarPagoDto dto)
         {
-            OrdenId = orden.Id,
-            UsuarioId = usuarioId,
-            TotalVenta = orden.TotalOrden,
-            Fecha = DateTime.Now
-        };
-        _context.Ventas.Add(venta);
-        await _context.SaveChangesAsync(); // Necesario para obtener venta.Id
+            if (dto == null) return BadRequest(new { message = "Datos de pago inválidos" });
 
-        // 7) Crear Pago
-        var pago = new Pago
-        {
-            VentaId = venta.Id,
-            MetodoPagoId = metodoPago.Id,
-            MontoPago = dto.Monto,
-            Estado = "completado",
-            FechaPago = DateTime.Now
-        };
-        _context.Pagos.Add(pago);
-        await _context.SaveChangesAsync(); // Obtener pago.Id
+            try
+            {
+                // 1) Obtener la orden y validar existencia / no pagada
+                var orden = await _context.Ordenes
+                    .Include(o => o.Estado)
+                    .Include(o => o.Usuario)
+                    .Include(o => o.Mesa)
+                    .FirstOrDefaultAsync(o => o.Id == id);
 
-       // 8) Crear MovimientoCaja (INGRESO)
-var movimiento = new MovimientoCaja
-{
-    UsuarioId = usuarioId,
-    Tipo = "INGRESO",
-    Monto = dto.Monto,
-    MetodoPagoId = metodoPago.Id,
-    Descripcion = $"Pago Orden #{orden.Id} - Mesa {orden.MesaId}",
-    PagoId = pago.Id,
-    Fecha = DateTime.Now
-};
-_context.MovimientosCaja.Add(movimiento);
-await _context.SaveChangesAsync(); // Obtener movimiento.Id
+                if (orden == null)
+                    return NotFound(new { message = "Orden no encontrada" });
 
-// 9) Crear Factura (dentro de la misma transacción)
-decimal tasaImpuesto = 0.15m; // ajustar si hace falta
-decimal totalFactura = dto.Monto;
-decimal subtotalFactura = Math.Round(totalFactura / (1 + tasaImpuesto), 2);
-decimal impuestoFactura = Math.Round(totalFactura - subtotalFactura, 2);
+                if (orden.Venta != null)
+                    return BadRequest(new { message = "Esta orden ya fue pagada" });
 
-// Generar número simple (puedes usar otro mecanismo real si tienes secuencias)
-var ultimaFactura = await _context.Facturas.OrderByDescending(f => f.Id).FirstOrDefaultAsync();
-int siguienteNumero = (ultimaFactura != null) ? ultimaFactura.Id + 1 : 1;
-string numeroFactura = siguienteNumero.ToString().PadLeft(8, '0');
+                // 2) Validar método de pago
+                var metodoPago = await _context.MetodosPago.FirstOrDefaultAsync(m => m.Id == dto.MetodoPagoId);
+                if (metodoPago == null)
+                    return BadRequest(new { message = "Método de pago no válido o inactivo" });
 
-var factura = new Factura
-{
-    PagoId = pago.Id,
-    NumeroFactura = numeroFactura,
-    FechaEmision = DateTime.Now,
-    Subtotal = subtotalFactura,
-    Impuesto = impuestoFactura,
-    Total = totalFactura,
-    Cai = "DEMO-CAI-000000000", // reemplaza por real
-    RangoAutorizado = "00000001-00001000", // reemplaza por real
-    FechaLimiteEmision = DateTime.Today.AddMonths(6),
-    Estado = "EMITIDA"
-};
+                // 3) Validar monto
+                if (dto.Monto <= 0)
+                    return BadRequest(new { message = "El monto debe ser mayor a 0" });
 
-_context.Facturas.Add(factura);
-await _context.SaveChangesAsync();
+                if (dto.Monto != orden.TotalOrden)
+                    return BadRequest(new { message = $"El monto ({dto.Monto}) no coincide con el total de la orden ({orden.TotalOrden})" });
 
-// 10) (Opcional) Cambiar estado de la orden a ENTREGADO
-var estadoEntregado = await _context.EstadosOrden.FirstOrDefaultAsync(e => e.Nombre == "ENTREGADO");
-if (estadoEntregado != null)
-{
-    orden.EstadoId = estadoEntregado.Id;
-    _context.Ordenes.Update(orden);
-    await _context.SaveChangesAsync();
-}
+                // 4) Obtener usuario actual del token JWT
+                var usuarioIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(usuarioIdClaim))
+                    return Unauthorized(new { message = "Usuario no autenticado" });
+                var usuarioId = int.Parse(usuarioIdClaim);
 
-// 11) Commit transacción
-await transaction.CommitAsync();
+                // 5) Iniciar transacción para mantener consistencia
+                await using var transaction = await _context.Database.BeginTransactionAsync();
 
-// 12) Recuperar y proyectar el movimiento creado en un DTO para devolver al frontend
-var movimientoCompleto = await _context.MovimientosCaja
-    .Where(x => x.Id == movimiento.Id)
-    .Select(m => new MovimientoResponseDto
-    {
-        Id = m.Id,
-        UsuarioId = m.UsuarioId,
-        UsuarioNombre = m.Usuario != null ? m.Usuario.Nombre : null,
-        Tipo = m.Tipo,
-        Monto = m.Monto,
-        MetodoPagoId = m.MetodoPagoId,
-        MetodoPagoNombre = m.MetodoPago != null ? m.MetodoPago.Nombre : null,
-        Descripcion = m.Descripcion,
-        PagoId = m.PagoId,
-        Fecha = m.Fecha,
-        CierreId = m.CierreId
-    })
-    .FirstOrDefaultAsync();
+                // 6) Crear Venta
+                var venta = new Venta
+                {
+                    OrdenId = orden.Id,
+                    UsuarioId = usuarioId,
+                    TotalVenta = orden.TotalOrden,
+                    Fecha = DateTime.Now
+                };
+                _context.Ventas.Add(venta);
+                await _context.SaveChangesAsync();
 
-// Recuperar la factura para enviar al frontend
-var facturaCompleta = await _context.Facturas
-    .Where(f => f.Id == factura.Id)
-    .Select(f => new
-    {
-        f.Id,
-        f.PagoId,
-        f.NumeroFactura,
-        f.FechaEmision,
-        f.Subtotal,
-        f.Impuesto,
-        f.Total,
-        f.Cai,
-        f.RangoAutorizado,
-        f.FechaLimiteEmision,
-        f.Estado
-    }).FirstOrDefaultAsync();
+                // 7) Crear Pago
+                var pago = new Pago
+                {
+                    VentaId = venta.Id,
+                    MetodoPagoId = metodoPago.Id,
+                    MontoPago = dto.Monto,
+                    Estado = "completado",
+                    FechaPago = DateTime.Now
+                };
+                _context.Pagos.Add(pago);
+                await _context.SaveChangesAsync();
 
-// 13) Responder con información útil (incluye el movimiento proyectado y la factura)
-return Ok(new
-{
-    message = "Pago registrado correctamente",
-    ventaId = venta.Id,
-    pagoId = pago.Id,
-    movimiento = movimientoCompleto,
-    ordenId = orden.Id,
-    metodoPago = metodoPago.Nombre,
-    monto = dto.Monto,
-    factura = facturaCompleta
-});
+                // 8) Crear MovimientoCaja (INGRESO)
+                var movimiento = new MovimientoCaja
+                {
+                    UsuarioId = usuarioId,
+                    Tipo = "INGRESO",
+                    Monto = dto.Monto,
+                    MetodoPagoId = metodoPago.Id,
+                    Descripcion = $"Pago Orden #{orden.Id} - Mesa {orden.MesaId}",
+                    PagoId = pago.Id,
+                    Fecha = DateTime.Now
+                };
+                _context.MovimientosCaja.Add(movimiento);
+                await _context.SaveChangesAsync();
 
-    }
-    catch (Exception ex)
-    {
-        // Log completo en consola (útil mientras depuras)
-        Console.WriteLine($"❌ ERROR en RegistrarPago: {ex.ToString()}");
-        return StatusCode(500, new
-        {
-            message = "Error interno al registrar el pago",
-            error = ex.Message
-        });
-    }
-}
+                // 9) Crear Factura
+                decimal tasaImpuesto = 0.15m;
+                decimal totalFactura = dto.Monto;
+                decimal subtotalFactura = Math.Round(totalFactura / (1 + tasaImpuesto), 2);
+                decimal impuestoFactura = Math.Round(totalFactura - subtotalFactura, 2);
 
+                var ultimaFactura = await _context.Facturas.OrderByDescending(f => f.Id).FirstOrDefaultAsync();
+                int siguienteNumero = (ultimaFactura != null) ? ultimaFactura.Id + 1 : 1;
+                string numeroFactura = siguienteNumero.ToString().PadLeft(8, '0');
+
+                var factura = new Factura
+                {
+                    PagoId = pago.Id,
+                    NumeroFactura = numeroFactura,
+                    FechaEmision = DateTime.Now,
+                    Subtotal = subtotalFactura,
+                    Impuesto = impuestoFactura,
+                    Total = totalFactura,
+                    Cai = "DEMO-CAI-000000000",
+                    RangoAutorizado = "00000001-00001000",
+                    FechaLimiteEmision = DateTime.Today.AddMonths(6),
+                    Estado = "EMITIDA"
+                };
+
+                _context.Facturas.Add(factura);
+                await _context.SaveChangesAsync();
+
+                // 10) Cambiar estado de la orden a ENTREGADO
+                var estadoEntregado = await _context.EstadosOrden.FirstOrDefaultAsync(e => e.Nombre == "ENTREGADO");
+                if (estadoEntregado != null)
+                {
+                    orden.EstadoId = estadoEntregado.Id;
+                    _context.Ordenes.Update(orden);
+                    await _context.SaveChangesAsync();
+                }
+
+                // 11) Obtener detalles de la orden para la factura (CORREGIDO: DetalleOrden en lugar de DetalleOrdenes)
+                var detallesOrden = await _context.DetalleOrdenes
+                    .Where(d => d.OrdenId == orden.Id)
+                    .Include(d => d.Plato)
+                    .Select(d => new DetalleOrdenFacturaDto
+                    {
+                        PlatoNombre = d.Plato != null ? d.Plato.Nombre : "Plato no disponible",
+                        Cantidad = d.Cantidad,
+                        PrecioUnitario = d.PrecioUnitario,
+                        Subtotal = d.Subtotal,
+                        NotaPlato = d.NotaPlato
+                    })
+                    .ToListAsync();
+
+                // Obtener información del mesero/mesa
+                var meseroNombre = orden.Usuario?.Nombre ?? "Desconocido";
+                var mesaCodigo = orden.Mesa?.Codigo ?? orden.MesaId.ToString();
+
+                // 12) Commit transacción
+                await transaction.CommitAsync();
+
+                // 13) Recuperar y proyectar el movimiento creado
+                var movimientoCompleto = await _context.MovimientosCaja
+                    .Where(x => x.Id == movimiento.Id)
+                    .Select(m => new MovimientoResponseDto
+                    {
+                        Id = m.Id,
+                        UsuarioId = m.UsuarioId,
+                        UsuarioNombre = m.Usuario != null ? m.Usuario.Nombre : null,
+                        Tipo = m.Tipo,
+                        Monto = m.Monto,
+                        MetodoPagoId = m.MetodoPagoId,
+                        MetodoPagoNombre = m.MetodoPago != null ? m.MetodoPago.Nombre : null,
+                        Descripcion = m.Descripcion,
+                        PagoId = m.PagoId,
+                        Fecha = m.Fecha,
+                        CierreId = m.CierreId
+                    })
+                    .FirstOrDefaultAsync();
+
+                // 14) Preparar la factura completa para el frontend
+                var facturaCompleta = new
+                {
+                    factura.Id,
+                    factura.PagoId,
+                    factura.NumeroFactura,
+                    factura.FechaEmision,
+                    factura.Subtotal,
+                    factura.Impuesto,
+                    factura.Total,
+                    factura.Cai,
+                    factura.RangoAutorizado,
+                    factura.FechaLimiteEmision,
+                    factura.Estado,
+                    Mesero = meseroNombre,
+                    Mesa = mesaCodigo,
+                    Detalles = detallesOrden
+                };
+
+                // 15) Responder con información útil
+                return Ok(new
+                {
+                    message = "Pago registrado correctamente",
+                    ventaId = venta.Id,
+                    pagoId = pago.Id,
+                    movimiento = movimientoCompleto,
+                    ordenId = orden.Id,
+                    metodoPago = metodoPago.Nombre,
+                    monto = dto.Monto,
+                    factura = facturaCompleta
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ ERROR en RegistrarPago: {ex.ToString()}");
+                return StatusCode(500, new
+                {
+                    message = "Error interno al registrar el pago",
+                    error = ex.Message
+                });
+            }
+        }
 
         // 6. CIERRE DIARIO 
         [HttpGet("cierre-diario")]
@@ -454,11 +465,11 @@ return Ok(new
         }
     }
 
-    // ✅ DTOs ACTUALIZADOS
+    // DTOs
     public class RegistrarPagoDto
     {
-        public int MetodoPagoId { get; set; } // ✅ Ahora recibe el ID
-        public decimal Monto { get; set; }     // ✅ Agregado para validación
+        public int MetodoPagoId { get; set; }
+        public decimal Monto { get; set; }
     }
 
     public class CrearCierreDto
@@ -468,5 +479,15 @@ return Ok(new
         public DateTime Hasta { get; set; }
         public decimal EfectivoContado { get; set; }
         public string? Observaciones { get; set; }
+    }
+
+    // Nuevo DTO para detalles de factura (agregar esto dentro o fuera de la clase CajaController)
+    public class DetalleOrdenFacturaDto
+    {
+        public string PlatoNombre { get; set; }
+        public int Cantidad { get; set; }
+        public decimal PrecioUnitario { get; set; }
+        public decimal Subtotal { get; set; }
+        public string? NotaPlato { get; set; }
     }
 }
