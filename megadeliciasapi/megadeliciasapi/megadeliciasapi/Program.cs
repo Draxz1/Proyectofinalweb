@@ -28,7 +28,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // --- 3. REGISTRAR SERVICIOS ---
 builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<InventarioService>(); // ⭐ NUEVO
+builder.Services.AddScoped<InventarioService>();
 
 // --- 4. CONFIGURACIÓN DE JWT (AUTENTICACIÓN) ---
 builder.Services.AddAuthentication(options =>

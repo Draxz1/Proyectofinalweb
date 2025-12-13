@@ -11,6 +11,7 @@ namespace megadeliciasapi.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // 1. MANTENER LA ELIMINACIÓN DE LLAVES FORÁNEAS (ESTO SÍ SE EJECUTA)
             migrationBuilder.DropForeignKey(
                 name: "FK_CierresCaja_Usuarios_UsuarioId",
                 table: "CierresCaja");
@@ -35,6 +36,11 @@ namespace megadeliciasapi.Migrations
                 name: "FK_Ventas_Usuarios_UsuarioId",
                 table: "Ventas");
 
+            // 2. COMENTAR LA CREACIÓN DE LA TABLA (PORQUE YA EXISTE EN TU BD)
+            /* ESTE BLOQUE ESTÁ COMENTADO PARA EVITAR EL ERROR "There is already an object named 'Productos'".
+               EF Core creerá que lo ejecutó, pero no tocará la base de datos en esta parte.
+            */
+            /*
             migrationBuilder.CreateTable(
                 name: "Productos",
                 columns: table => new
@@ -66,7 +72,9 @@ namespace megadeliciasapi.Migrations
                 name: "IX_Productos_Nombre",
                 table: "Productos",
                 column: "Nombre");
+            */
 
+            // 3. MANTENER LA CREACIÓN DE LAS NUEVAS LLAVES FORÁNEAS (ESTO SÍ SE EJECUTA)
             migrationBuilder.AddForeignKey(
                 name: "FK_CierresCaja_Usuarios_UsuarioId",
                 table: "CierresCaja",
@@ -151,7 +159,8 @@ namespace megadeliciasapi.Migrations
                 table: "CierresCaja",
                 column: "UsuarioId",
                 principalTable: "Usuarios",
-                principalColumn: "Id");
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade); // Restaurar comportamiento anterior si es necesario
 
             migrationBuilder.AddForeignKey(
                 name: "FK_Facturas_Pagos_PagoId",

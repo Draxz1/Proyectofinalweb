@@ -1,6 +1,11 @@
 using megadeliciasapi.Data;
 using megadeliciasapi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace megadeliciasapi.Services
 {
@@ -15,77 +20,58 @@ namespace megadeliciasapi.Services
             _logger = logger;
         }
 
-        public async Task<bool> DescontarIngredientesPorOrden(int ordenId)
+        public async Task<(bool Exito, string Mensaje)> ProcesarConsumoOrden(int ordenId)
         {
+            // Usamos transacción para asegurar consistencia
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            
             try
             {
                 var orden = await _context.Ordenes
                     .Include(o => o.Detalles)
-                    .ThenInclude(d => d.Plato)
                     .FirstOrDefaultAsync(o => o.Id == ordenId);
 
-                if (orden == null)
-                {
-                    _logger.LogWarning("Orden {OrdenId} no encontrada", ordenId);
-                    return false;
-                }
+                if (orden == null) return (false, "Orden no encontrada");
+
+                var errores = new List<string>();
 
                 foreach (var detalle in orden.Detalles)
                 {
+                    // Buscamos los ingredientes definidos para este plato
                     var ingredientes = await _context.PlatoIngredientes
-                        .Where(pi => pi.PlatoId == detalle.PlatoId)
                         .Include(pi => pi.InventarioItem)
+                        .Where(pi => pi.PlatoId == detalle.PlatoId)
                         .ToListAsync();
 
-                    if (!ingredientes.Any())
-                    {
-                        _logger.LogWarning("Plato {PlatoNombre} no tiene ingredientes configurados", detalle.Plato?.Nombre);
-                        continue;
-                    }
+                    if (!ingredientes.Any()) continue; 
 
-                    // Verificar stock suficiente
-                    foreach (var ingrediente in ingredientes)
-                    {
-                        if (ingrediente.InventarioItem == null)
-                        {
-                            _logger.LogWarning("Ingrediente {IngredienteId} no tiene InventarioItem asociado", ingrediente.Id);
-                            continue;
-                        }
-
-                        var cantidadNecesaria = ingrediente.CantidadUsada * detalle.Cantidad;
-
-                        if (ingrediente.InventarioItem.StockActual < (int)Math.Ceiling(cantidadNecesaria))
-                        {
-                            _logger.LogError(
-                                "Stock insuficiente: {Ingrediente} necesita {Necesaria} {Unidad} pero solo hay {Disponible}",
-                                ingrediente.InventarioItem.Nombre,
-                                cantidadNecesaria,
-                                ingrediente.UnidadMedida,
-                                ingrediente.InventarioItem.StockActual
-                            );
-                            return false;
-                        }
-                    }
-
-                    // Descontar ingredientes
                     foreach (var ingrediente in ingredientes)
                     {
                         if (ingrediente.InventarioItem == null) continue;
 
-                        var cantidadNecesaria = ingrediente.CantidadUsada * detalle.Cantidad;
+                        // Cálculo de cantidad total a descontar
+                        decimal cantidadNecesaria = ingrediente.CantidadUsada * detalle.Cantidad;
+                        int cantidadDescontar = (int)Math.Ceiling(cantidadNecesaria);
 
-                        // ⭐ DESCONTAR CON CAST A INT (StockActual es int)
-                        ingrediente.InventarioItem.StockActual -= (int)Math.Ceiling(cantidadNecesaria);
+                        // 1. Validar Stock
+                        if (ingrediente.InventarioItem.StockActual < cantidadDescontar)
+                        {
+                            errores.Add($"Falta stock: {ingrediente.InventarioItem.Nombre} (Req: {cantidadDescontar}, Disp: {ingrediente.InventarioItem.StockActual})");
+                            continue;
+                        }
 
-                        // Registrar movimiento
+                        // 2. Descontar del Stock Real
+                        ingrediente.InventarioItem.StockActual -= cantidadDescontar;
+
+                        // 3. Registrar el Movimiento para que salga en el panel
                         var movimiento = new InventarioMovimiento
                         {
                             ItemId = ingrediente.ItemId,
                             PlatoIngredienteId = ingrediente.Id,
                             Tipo = "CONSUMO_COCINA",
-                            Cantidad = (int)Math.Ceiling(cantidadNecesaria),
+                            Cantidad = cantidadDescontar,
                             CostoUnitario = ingrediente.InventarioItem.CostoUnitario,
-                            Motivo = $"Orden #{ordenId} - {detalle.Plato?.Nombre ?? "Plato"} x{detalle.Cantidad}",
+                            Motivo = $"Orden #{ordenId}",
                             Fecha = DateTime.Now
                         };
 
@@ -93,14 +79,22 @@ namespace megadeliciasapi.Services
                     }
                 }
 
+                if (errores.Any())
+                {
+                    await transaction.RollbackAsync();
+                    return (false, string.Join(" | ", errores));
+                }
+
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Ingredientes descontados exitosamente para orden {OrdenId}", ordenId);
-                return true;
+                await transaction.CommitAsync();
+                
+                return (true, "Inventario actualizado");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al descontar ingredientes de orden {OrdenId}", ordenId);
-                return false;
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error descontando inventario orden {Id}", ordenId);
+                return (false, "Error interno: " + ex.Message);
             }
         }
     }
