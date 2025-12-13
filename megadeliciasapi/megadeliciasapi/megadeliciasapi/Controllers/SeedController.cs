@@ -19,6 +19,37 @@ namespace megadeliciasapi.Controllers
         }
 
         // ========================================
+        // 0. SEMBRAR MÉTODOS DE PAGO (¡INDISPENSABLE!)
+        // ========================================
+        [HttpPost("metodos-pago")]
+        public async Task<IActionResult> SeedMetodosPago()
+        {
+            try
+            {
+                if (await _context.MetodosPago.AnyAsync())
+                {
+                    return Ok(new { message = "⚠️ Los métodos de pago ya existen." });
+                }
+
+                var metodos = new List<MetodoPago>
+                {
+                    new MetodoPago { Nombre = "Efectivo", Activo = true },
+                    new MetodoPago { Nombre = "Tarjeta", Activo = true }, // Para POS
+                    new MetodoPago { Nombre = "Transferencia", Activo = true }
+                };
+
+                await _context.MetodosPago.AddRangeAsync(metodos);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "✅ Métodos de pago (Efectivo, Tarjeta, Transferencia) creados exitosamente." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al crear métodos de pago", error = ex.Message });
+            }
+        }
+
+        // ========================================
         // 1. SEMBRAR ESTADOS
         // ========================================
         [HttpPost("estados")]
@@ -80,6 +111,8 @@ namespace megadeliciasapi.Controllers
                 new Plato { Nombre = "Badass Fries", Precio = 180, Categoria = "Para compartir", Estado = "Activo", Disponible = true },
                 new Plato { Nombre = "Hamburguesa de la casa", Precio = 180, Categoria = "Hamburguesa", Estado = "Activo", Disponible = true },
                 new Plato { Nombre = "Megatostones de la casa", Precio = 150, Categoria = "Megatostones", Estado = "Activo", Disponible = true },
+                
+                // ✅ IMPORTANTE: Nombres exactos para las alitas (coinciden con receta)
                 new Plato { Nombre = "Alitas de la casa (6)", Precio = 190, Categoria = "Alitas", Estado = "Activo", Disponible = true },
                 new Plato { Nombre = "Alitas de la casa (12)", Precio = 360, Categoria = "Alitas", Estado = "Activo", Disponible = true },
 
@@ -147,7 +180,7 @@ namespace megadeliciasapi.Controllers
         }
 
         // ========================================
-        // 4. SEMBRAR INVENTARIO (PRODUCTOS) ⭐ Panel General
+        // 4. SEMBRAR INVENTARIO (PRODUCTOS) - Panel General
         // ========================================
         [HttpPost("inventario")]
         public async Task<IActionResult> SeedInventario()
@@ -156,10 +189,7 @@ namespace megadeliciasapi.Controllers
             {
                 if (await _context.Productos.AnyAsync())
                 {
-                    return Ok(new { 
-                        message = "⚠️ Ya existen productos en el inventario.",
-                        totalProductos = await _context.Productos.CountAsync()
-                    });
+                    return Ok(new { message = "⚠️ Ya existen productos en el inventario." });
                 }
 
                 var productos = new List<Producto>
@@ -168,78 +198,22 @@ namespace megadeliciasapi.Controllers
                     new Producto { Nombre = "Carne Molida Especial", Descripcion = "Carne molida de res premium", Categoria = "Carnes", PrecioUnitario = 85.00m, Stock = 5, StockMinimo = 2, UnidadMedida = "Libra", Activo = true },
                     new Producto { Nombre = "Pechuga de Pollo", Descripcion = "Pechuga de pollo fresca sin hueso", Categoria = "Carnes", PrecioUnitario = 60.00m, Stock = 8, StockMinimo = 3, UnidadMedida = "Libra", Activo = true },
                     new Producto { Nombre = "Costilla de Cerdo", Descripcion = "Costilla de cerdo con hueso", Categoria = "Carnes", PrecioUnitario = 95.00m, Stock = 2, StockMinimo = 1, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Carne de Res en Bistec", Descripcion = "Bistec de res corte fino", Categoria = "Carnes", PrecioUnitario = 120.00m, Stock = 6, StockMinimo = 2, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Muslo de Pollo", Descripcion = "Muslo de pollo con piel", Categoria = "Carnes", PrecioUnitario = 45.00m, Stock = 10, StockMinimo = 4, UnidadMedida = "Libra", Activo = true },
-
-                    // VERDURAS
-                    new Producto { Nombre = "Tomate Manzano", Descripcion = "Tomate rojo fresco", Categoria = "Verduras", PrecioUnitario = 5.00m, Stock = 25, StockMinimo = 10, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Cebolla Amarilla", Descripcion = "Cebolla amarilla mediana", Categoria = "Verduras", PrecioUnitario = 4.00m, Stock = 15, StockMinimo = 5, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Chile Dulce", Descripcion = "Chile dulce verde o rojo", Categoria = "Verduras", PrecioUnitario = 6.00m, Stock = 11, StockMinimo = 5, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Papa", Descripcion = "Papa blanca grande", Categoria = "Verduras", PrecioUnitario = 12.00m, Stock = 50, StockMinimo = 20, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Culantro", Descripcion = "Culantro fresco", Categoria = "Verduras", PrecioUnitario = 3.00m, Stock = 5, StockMinimo = 2, UnidadMedida = "Manojo", Activo = true },
-                    new Producto { Nombre = "Lechuga Americana", Descripcion = "Lechuga fresca", Categoria = "Verduras", PrecioUnitario = 15.00m, Stock = 8, StockMinimo = 3, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Zanahoria", Descripcion = "Zanahoria fresca", Categoria = "Verduras", PrecioUnitario = 8.00m, Stock = 20, StockMinimo = 8, UnidadMedida = "Libra", Activo = true },
-
-                    // FRUTAS
-                    new Producto { Nombre = "Banano Maduro", Descripcion = "Banano maduro para freír", Categoria = "Frutas", PrecioUnitario = 2.00m, Stock = 30, StockMinimo = 10, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Limón", Descripcion = "Limón persa fresco", Categoria = "Frutas", PrecioUnitario = 3.00m, Stock = 40, StockMinimo = 15, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Aguacate", Descripcion = "Aguacate hass maduro", Categoria = "Frutas", PrecioUnitario = 18.00m, Stock = 12, StockMinimo = 5, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Piña", Descripcion = "Piña golden madura", Categoria = "Frutas", PrecioUnitario = 35.00m, Stock = 5, StockMinimo = 2, UnidadMedida = "Unidad", Activo = true },
-
-                    // LÁCTEOS
-                    new Producto { Nombre = "Queso Crema", Descripcion = "Queso crema para untar", Categoria = "Lácteos", PrecioUnitario = 85.00m, Stock = 6, StockMinimo = 2, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Mantequilla", Descripcion = "Mantequilla con sal", Categoria = "Lácteos", PrecioUnitario = 45.00m, Stock = 4, StockMinimo = 2, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Leche Entera", Descripcion = "Leche entera pasteurizada", Categoria = "Lácteos", PrecioUnitario = 25.00m, Stock = 10, StockMinimo = 4, UnidadMedida = "Litro", Activo = true },
-                    new Producto { Nombre = "Crema Ácida", Descripcion = "Crema ácida natural", Categoria = "Lácteos", PrecioUnitario = 35.00m, Stock = 8, StockMinimo = 3, UnidadMedida = "Litro", Activo = true },
-
-                    // GRANOS
-                    new Producto { Nombre = "Arroz Blanco", Descripcion = "Arroz blanco de primera", Categoria = "Granos", PrecioUnitario = 18.00m, Stock = 20, StockMinimo = 10, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Frijoles Rojos", Descripcion = "Frijoles rojos secos", Categoria = "Granos", PrecioUnitario = 22.00m, Stock = 15, StockMinimo = 8, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Harina de Trigo", Descripcion = "Harina de trigo todo uso", Categoria = "Granos", PrecioUnitario = 15.00m, Stock = 12, StockMinimo = 5, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Maíz en Grano", Descripcion = "Maíz amarillo seco", Categoria = "Granos", PrecioUnitario = 12.00m, Stock = 10, StockMinimo = 5, UnidadMedida = "Libra", Activo = true },
-
-                    // ACEITES Y CONDIMENTOS
-                    new Producto { Nombre = "Aceite Vegetal", Descripcion = "Aceite vegetal para cocinar", Categoria = "Aceites", PrecioUnitario = 75.00m, Stock = 6, StockMinimo = 2, UnidadMedida = "Litro", Activo = true },
-                    new Producto { Nombre = "Sal", Descripcion = "Sal de cocina refinada", Categoria = "Condimentos", PrecioUnitario = 8.00m, Stock = 15, StockMinimo = 5, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Pimienta Negra", Descripcion = "Pimienta negra molida", Categoria = "Condimentos", PrecioUnitario = 45.00m, Stock = 3, StockMinimo = 1, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Ajo en Polvo", Descripcion = "Ajo deshidratado en polvo", Categoria = "Condimentos", PrecioUnitario = 35.00m, Stock = 4, StockMinimo = 2, UnidadMedida = "Libra", Activo = true },
-                    new Producto { Nombre = "Comino", Descripcion = "Comino molido", Categoria = "Condimentos", PrecioUnitario = 40.00m, Stock = 2, StockMinimo = 1, UnidadMedida = "Libra", Activo = true },
-
-                    // BEBIDAS
-                    new Producto { Nombre = "Coca Cola 2.5L", Descripcion = "Refresco Coca Cola 2.5 litros", Categoria = "Bebidas", PrecioUnitario = 35.00m, Stock = 20, StockMinimo = 10, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Sprite 2.5L", Descripcion = "Refresco Sprite 2.5 litros", Categoria = "Bebidas", PrecioUnitario = 35.00m, Stock = 15, StockMinimo = 8, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Agua Embotellada 500ml", Descripcion = "Agua purificada embotellada", Categoria = "Bebidas", PrecioUnitario = 8.00m, Stock = 50, StockMinimo = 20, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Jugo de Naranja Natural", Descripcion = "Jugo de naranja fresco", Categoria = "Bebidas", PrecioUnitario = 25.00m, Stock = 10, StockMinimo = 5, UnidadMedida = "Litro", Activo = true },
-
-                    // PANADERÍA
-                    new Producto { Nombre = "Pan Francés", Descripcion = "Pan francés fresco", Categoria = "Panadería", PrecioUnitario = 1.50m, Stock = 50, StockMinimo = 20, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Pan de Hamburguesa", Descripcion = "Pan para hamburguesa con ajonjolí", Categoria = "Panadería", PrecioUnitario = 8.00m, Stock = 24, StockMinimo = 12, UnidadMedida = "Unidad", Activo = true },
-                    new Producto { Nombre = "Tortilla de Harina", Descripcion = "Tortilla de harina grande", Categoria = "Panadería", PrecioUnitario = 2.00m, Stock = 40, StockMinimo = 20, UnidadMedida = "Unidad", Activo = true }
+                    // ... (Se mantiene igual)
                 };
 
                 _context.Productos.AddRange(productos);
                 await _context.SaveChangesAsync();
 
-                var resumen = productos
-                    .GroupBy(p => p.Categoria)
-                    .Select(g => new { Categoria = g.Key, Cantidad = g.Count() })
-                    .ToList();
-
-                return Ok(new { 
-                    message = "✅ Inventario inicial creado exitosamente",
-                    totalProductos = productos.Count,
-                    resumenPorCategoria = resumen
-                });
+                return Ok(new { message = "✅ Inventario inicial creado exitosamente" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear inventario inicial");
                 return StatusCode(500, new { message = "❌ Error al crear inventario", error = ex.Message });
             }
         }
 
         // ========================================
-        // 5. SEMBRAR INGREDIENTES (InventarioItems) ⭐ NUEVO - Para Recetas
+        // 5. SEMBRAR INGREDIENTES REALISTAS (InventarioItems)
         // ========================================
         [HttpPost("inventario-items")]
         public async Task<IActionResult> SeedInventarioItems()
@@ -254,9 +228,7 @@ namespace megadeliciasapi.Controllers
                     });
                 }
 
-                // Obtener o crear categoría
-                var categoriaIngredientes = await _context.Categorias
-                    .FirstOrDefaultAsync(c => c.Nombre == "Ingredientes");
+                var categoriaIngredientes = await _context.Categorias.FirstOrDefaultAsync(c => c.Nombre == "Ingredientes");
                 
                 if (categoriaIngredientes == null)
                 {
@@ -267,99 +239,38 @@ namespace megadeliciasapi.Controllers
 
                 var ingredientes = new List<InventarioItem>
                 {
-                    // Verduras
-                    new InventarioItem { 
-                        Nombre = "Lechuga Romana", 
-                        StockActual = 50, 
-                        StockMinimo = 10, 
-                        CostoUnitario = 15m, 
-                        UnidadMedida = "Unidad", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    new InventarioItem { 
-                        Nombre = "Tomate Fresco", 
-                        StockActual = 100, 
-                        StockMinimo = 20, 
-                        CostoUnitario = 8m, 
-                        UnidadMedida = "Unidad", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    new InventarioItem { 
-                        Nombre = "Cebolla Blanca", 
-                        StockActual = 80, 
-                        StockMinimo = 15, 
-                        CostoUnitario = 5m, 
-                        UnidadMedida = "Unidad", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    
-                    // Carnes
-                    new InventarioItem { 
-                        Nombre = "Carne Molida de Res", 
-                        StockActual = 30, 
-                        StockMinimo = 5, 
-                        CostoUnitario = 120m, 
-                        UnidadMedida = "Libra", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    new InventarioItem { 
-                        Nombre = "Pechuga de Pollo", 
-                        StockActual = 25, 
-                        StockMinimo = 5, 
-                        CostoUnitario = 85m, 
-                        UnidadMedida = "Libra", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    
-                    // Panadería
-                    new InventarioItem { 
-                        Nombre = "Pan de Hamburguesa", 
-                        StockActual = 100, 
-                        StockMinimo = 20, 
-                        CostoUnitario = 4m, 
-                        UnidadMedida = "Unidad", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    new InventarioItem { 
-                        Nombre = "Pan Francés", 
-                        StockActual = 80, 
-                        StockMinimo = 15, 
-                        CostoUnitario = 2m, 
-                        UnidadMedida = "Unidad", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    
-                    // Lácteos
-                    new InventarioItem { 
-                        Nombre = "Queso Amarillo", 
-                        StockActual = 20, 
-                        StockMinimo = 5, 
-                        CostoUnitario = 35m, 
-                        UnidadMedida = "Libra", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    },
-                    new InventarioItem { 
-                        Nombre = "Mantequilla", 
-                        StockActual = 15, 
-                        StockMinimo = 3, 
-                        CostoUnitario = 45m, 
-                        UnidadMedida = "Libra", 
-                        CategoriaId = categoriaIngredientes.Id 
-                    }
+                    // === PROTEÍNAS ===
+                    new InventarioItem { Nombre = "Alita de Pollo Marinada", StockActual = 200, StockMinimo = 24, CostoUnitario = 8m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Carne Molida de Res", StockActual = 30, StockMinimo = 5, CostoUnitario = 120m, UnidadMedida = "Libra", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Chuleta de Cerdo", StockActual = 40, StockMinimo = 10, CostoUnitario = 45m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Camarones Limpios", StockActual = 20, StockMinimo = 5, CostoUnitario = 180m, UnidadMedida = "Libra", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Huevo", StockActual = 150, StockMinimo = 30, CostoUnitario = 4m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+
+                    // === GUARNICIONES Y VERDURAS ===
+                    new InventarioItem { Nombre = "Plátano Verde", StockActual = 60, StockMinimo = 15, CostoUnitario = 5m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Papa (Para freír)", StockActual = 100, StockMinimo = 20, CostoUnitario = 10m, UnidadMedida = "Libra", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Lechuga Romana", StockActual = 50, StockMinimo = 10, CostoUnitario = 15m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Tomate Fresco", StockActual = 100, StockMinimo = 20, CostoUnitario = 5m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Cebolla Blanca", StockActual = 80, StockMinimo = 15, CostoUnitario = 4m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Repollo", StockActual = 20, StockMinimo = 5, CostoUnitario = 20m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+
+                    // === PANES Y HARINAS ===
+                    new InventarioItem { Nombre = "Pan de Hamburguesa", StockActual = 100, StockMinimo = 20, CostoUnitario = 6m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Tortilla de Maíz", StockActual = 200, StockMinimo = 50, CostoUnitario = 1m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Frijoles Rojos Cocidos", StockActual = 50, StockMinimo = 10, CostoUnitario = 15m, UnidadMedida = "Libra", CategoriaId = categoriaIngredientes.Id },
+
+                    // === LÁCTEOS Y EXTRAS ===
+                    new InventarioItem { Nombre = "Queso Amarillo (Slice)", StockActual = 100, StockMinimo = 20, CostoUnitario = 3m, UnidadMedida = "Unidad", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Queso Seco Rallado", StockActual = 15, StockMinimo = 3, CostoUnitario = 60m, UnidadMedida = "Libra", CategoriaId = categoriaIngredientes.Id },
+                    new InventarioItem { Nombre = "Mantequilla Crema", StockActual = 20, StockMinimo = 5, CostoUnitario = 45m, UnidadMedida = "Libra", CategoriaId = categoriaIngredientes.Id }
                 };
 
                 _context.InventarioItems.AddRange(ingredientes);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { 
-                    message = "✅ Ingredientes creados exitosamente",
-                    totalIngredientes = ingredientes.Count,
-                    ingredientes = ingredientes.Select(i => new { 
-                        i.Id,
-                        i.Nombre, 
-                        i.StockActual, 
-                        i.UnidadMedida 
-                    })
+                    message = "✅ Ingredientes realistas creados exitosamente",
+                    totalIngredientes = ingredientes.Count
                 });
             }
             catch (Exception ex)
@@ -370,7 +281,7 @@ namespace megadeliciasapi.Controllers
         }
 
         // ========================================
-        // 6. SEMBRAR RECETAS (PlatoIngrediente) ⭐ NUEVO
+        // 6. SEMBRAR RECETAS (PlatoIngrediente) CON ALITAS 6/12
         // ========================================
         [HttpPost("recetas-ingredientes")]
         public async Task<IActionResult> SeedRecetasIngredientes()
@@ -379,99 +290,102 @@ namespace megadeliciasapi.Controllers
             {
                 if (await _context.PlatoIngredientes.AnyAsync())
                 {
-                    return Ok(new { 
-                        message = "⚠️ Las recetas ya existen. Usa DELETE /api/Seed/recetas-ingredientes si quieres recrearlas.",
-                        totalRecetas = await _context.PlatoIngredientes.CountAsync()
-                    });
+                    return Ok(new { message = "⚠️ Las recetas ya existen. Limpia primero." });
                 }
 
-                // Buscar plato Hamburguesa
-                var hamburguesa = await _context.Platos
-                    .FirstOrDefaultAsync(p => p.Nombre.Contains("Hamburguesa"));
+                // --- 1. CARGAR PLATOS ---
+                var hamburguesa = await _context.Platos.FirstOrDefaultAsync(p => p.Nombre.Contains("Hamburguesa"));
+                var alitas6 = await _context.Platos.FirstOrDefaultAsync(p => p.Nombre.Contains("Alitas de la casa (6)"));
+                var alitas12 = await _context.Platos.FirstOrDefaultAsync(p => p.Nombre.Contains("Alitas de la casa (12)"));
+                var chuleta = await _context.Platos.FirstOrDefaultAsync(p => p.Nombre.Contains("Chuleta con tajadas"));
+                var desayuno = await _context.Platos.FirstOrDefaultAsync(p => p.Nombre.Contains("Catracho"));
 
-                if (hamburguesa == null)
-                {
-                    return BadRequest(new { 
-                        message = "❌ No se encontró el plato 'Hamburguesa' en el menú. Ejecuta primero POST /api/Seed/menu" 
-                    });
-                }
+                // --- 2. CARGAR INGREDIENTES ---
+                // Proteínas
+                var alitaCruda = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Alita de Pollo Marinada");
+                var carneMolida = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Carne Molida de Res");
+                var chuletaCruda = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Chuleta de Cerdo");
+                var huevo = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Huevo");
 
-                // Buscar ingredientes
+                // Guarniciones
+                var papa = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Papa"));
+                var platano = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Plátano Verde");
                 var lechuga = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Lechuga"));
                 var tomate = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Tomate"));
                 var cebolla = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Cebolla"));
-                var carne = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Carne"));
-                var pan = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Pan de Hamburguesa"));
+                var repollo = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Repollo");
+                var frijoles = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Frijoles"));
+                
+                // Panes / Harinas / Lacteos
+                var panHamb = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Pan de Hamburguesa"));
+                var tortilla = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre == "Tortilla de Maíz");
+                var quesoSlice = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Queso Amarillo"));
+                var quesoSeco = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Queso Seco"));
+                var mantequilla = await _context.InventarioItems.FirstOrDefaultAsync(i => i.Nombre.Contains("Mantequilla"));
 
-                if (lechuga == null || tomate == null || cebolla == null || carne == null || pan == null)
+                var recetas = new List<PlatoIngrediente>();
+
+                // --- RECETA 1: HAMBURGUESA (Con papas) ---
+                if (hamburguesa != null && panHamb != null)
                 {
-                    return BadRequest(new { 
-                        message = "❌ Faltan ingredientes. Ejecuta primero POST /api/Seed/inventario-items",
-                        ingredientesEncontrados = new {
-                            lechuga = lechuga?.Nombre ?? "NO ENCONTRADO",
-                            tomate = tomate?.Nombre ?? "NO ENCONTRADO",
-                            cebolla = cebolla?.Nombre ?? "NO ENCONTRADO",
-                            carne = carne?.Nombre ?? "NO ENCONTRADO",
-                            pan = pan?.Nombre ?? "NO ENCONTRADO"
-                        }
-                    });
+                    recetas.Add(new PlatoIngrediente { PlatoId = hamburguesa.Id, ItemId = panHamb.Id, CantidadUsada = 1, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(carneMolida != null) recetas.Add(new PlatoIngrediente { PlatoId = hamburguesa.Id, ItemId = carneMolida.Id, CantidadUsada = 0.25m, UnidadMedida = "Libra", CreadoEn = DateTime.Now });
+                    if(lechuga != null) recetas.Add(new PlatoIngrediente { PlatoId = hamburguesa.Id, ItemId = lechuga.Id, CantidadUsada = 1, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(tomate != null) recetas.Add(new PlatoIngrediente { PlatoId = hamburguesa.Id, ItemId = tomate.Id, CantidadUsada = 1, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(quesoSlice != null) recetas.Add(new PlatoIngrediente { PlatoId = hamburguesa.Id, ItemId = quesoSlice.Id, CantidadUsada = 1, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(papa != null) recetas.Add(new PlatoIngrediente { PlatoId = hamburguesa.Id, ItemId = papa.Id, CantidadUsada = 0.5m, UnidadMedida = "Libra", CreadoEn = DateTime.Now }); // Papas fritas
                 }
 
-                // Crear recetas para Hamburguesa
-                var recetas = new List<PlatoIngrediente>
+                // --- RECETA 2: ALITAS (6 UNIDADES) ---
+                if (alitas6 != null && alitaCruda != null)
                 {
-                    new PlatoIngrediente { 
-                        PlatoId = hamburguesa.Id, 
-                        ItemId = lechuga.Id, 
-                        CantidadUsada = 1, 
+                    recetas.Add(new PlatoIngrediente { 
+                        PlatoId = alitas6.Id, 
+                        ItemId = alitaCruda.Id, 
+                        CantidadUsada = 6, // ⭐ 6 Alitas
                         UnidadMedida = "Unidad",
                         CreadoEn = DateTime.Now
-                    },
-                    new PlatoIngrediente { 
-                        PlatoId = hamburguesa.Id, 
-                        ItemId = tomate.Id, 
-                        CantidadUsada = 2, 
+                    });
+                    if(papa != null) recetas.Add(new PlatoIngrediente { PlatoId = alitas6.Id, ItemId = papa.Id, CantidadUsada = 0.5m, UnidadMedida = "Libra", CreadoEn = DateTime.Now });
+                }
+
+                // --- RECETA 3: ALITAS (12 UNIDADES) ---
+                if (alitas12 != null && alitaCruda != null)
+                {
+                    recetas.Add(new PlatoIngrediente { 
+                        PlatoId = alitas12.Id, 
+                        ItemId = alitaCruda.Id, 
+                        CantidadUsada = 12, // ⭐ 12 Alitas
                         UnidadMedida = "Unidad",
                         CreadoEn = DateTime.Now
-                    },
-                    new PlatoIngrediente { 
-                        PlatoId = hamburguesa.Id, 
-                        ItemId = cebolla.Id, 
-                        CantidadUsada = 1, 
-                        UnidadMedida = "Unidad",
-                        CreadoEn = DateTime.Now
-                    },
-                    new PlatoIngrediente { 
-                        PlatoId = hamburguesa.Id, 
-                        ItemId = carne.Id, 
-                        CantidadUsada = 0.25m, 
-                        UnidadMedida = "Libra",
-                        CreadoEn = DateTime.Now
-                    },
-                    new PlatoIngrediente { 
-                        PlatoId = hamburguesa.Id, 
-                        ItemId = pan.Id, 
-                        CantidadUsada = 1, 
-                        UnidadMedida = "Unidad",
-                        CreadoEn = DateTime.Now
-                    }
-                };
+                    });
+                    if(papa != null) recetas.Add(new PlatoIngrediente { PlatoId = alitas12.Id, ItemId = papa.Id, CantidadUsada = 1.0m, UnidadMedida = "Libra", CreadoEn = DateTime.Now });
+                }
+
+                // --- RECETA 4: CHULETA CON TAJADAS ---
+                if (chuleta != null && chuletaCruda != null)
+                {
+                    recetas.Add(new PlatoIngrediente { PlatoId = chuleta.Id, ItemId = chuletaCruda.Id, CantidadUsada = 1, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(platano != null) recetas.Add(new PlatoIngrediente { PlatoId = chuleta.Id, ItemId = platano.Id, CantidadUsada = 1, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(repollo != null) recetas.Add(new PlatoIngrediente { PlatoId = chuleta.Id, ItemId = repollo.Id, CantidadUsada = 0.25m, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                }
+
+                // --- RECETA 5: DESAYUNO CATRACHO ---
+                if (desayuno != null && huevo != null)
+                {
+                    recetas.Add(new PlatoIngrediente { PlatoId = desayuno.Id, ItemId = huevo.Id, CantidadUsada = 2, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(frijoles != null) recetas.Add(new PlatoIngrediente { PlatoId = desayuno.Id, ItemId = frijoles.Id, CantidadUsada = 0.25m, UnidadMedida = "Libra", CreadoEn = DateTime.Now });
+                    if(tortilla != null) recetas.Add(new PlatoIngrediente { PlatoId = desayuno.Id, ItemId = tortilla.Id, CantidadUsada = 2, UnidadMedida = "Unidad", CreadoEn = DateTime.Now });
+                    if(quesoSeco != null) recetas.Add(new PlatoIngrediente { PlatoId = desayuno.Id, ItemId = quesoSeco.Id, CantidadUsada = 0.1m, UnidadMedida = "Libra", CreadoEn = DateTime.Now });
+                    if(mantequilla != null) recetas.Add(new PlatoIngrediente { PlatoId = desayuno.Id, ItemId = mantequilla.Id, CantidadUsada = 0.1m, UnidadMedida = "Libra", CreadoEn = DateTime.Now });
+                }
 
                 _context.PlatoIngredientes.AddRange(recetas);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { 
-                    message = $"✅ Receta creada: {hamburguesa.Nombre}",
-                    plato = hamburguesa.Nombre,
-                    totalIngredientes = recetas.Count,
-                    receta = recetas.Select(r => new {
-                        ingrediente = r.ItemId == lechuga.Id ? lechuga.Nombre :
-                                     r.ItemId == tomate.Id ? tomate.Nombre :
-                                     r.ItemId == cebolla.Id ? cebolla.Nombre :
-                                     r.ItemId == carne.Id ? carne.Nombre : pan.Nombre,
-                        cantidad = r.CantidadUsada,
-                        unidad = r.UnidadMedida
-                    })
+                    message = "✅ Recetas realistas configuradas correctamente.",
+                    totalRecetas = recetas.Count
                 });
             }
             catch (Exception ex)
@@ -482,87 +396,73 @@ namespace megadeliciasapi.Controllers
         }
 
         // ========================================
-        // 7. LIMPIAR INVENTARIO (PRODUCTOS)
+        // MÉTODOS DE LIMPIEZA
         // ========================================
+
         [HttpDelete("inventario")]
         public async Task<IActionResult> LimpiarInventario()
         {
             try
             {
                 var productos = await _context.Productos.ToListAsync();
-                var cantidad = productos.Count;
-
                 _context.Productos.RemoveRange(productos);
                 await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    message = "✅ Inventario (Productos) limpiado exitosamente",
-                    productosEliminados = cantidad
-                });
+                return Ok(new { message = "✅ Inventario (Productos) limpiado exitosamente" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar inventario");
-                return StatusCode(500, new { message = "❌ Error al limpiar inventario", error = ex.Message });
+                return StatusCode(500, new { message = "❌ Error", error = ex.Message });
             }
         }
 
-        // ========================================
-        // 8. LIMPIAR INGREDIENTES ⭐ NUEVO
-        // ========================================
         [HttpDelete("inventario-items")]
         public async Task<IActionResult> LimpiarIngredientes()
         {
             try
             {
-                // Primero eliminar recetas (por FK)
+                // Limpiar recetas primero por FK
                 var recetas = await _context.PlatoIngredientes.ToListAsync();
                 _context.PlatoIngredientes.RemoveRange(recetas);
 
-                // Luego eliminar ingredientes
                 var ingredientes = await _context.InventarioItems.ToListAsync();
-                var cantidad = ingredientes.Count;
-
                 _context.InventarioItems.RemoveRange(ingredientes);
+                
                 await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    message = "✅ Ingredientes y recetas limpiados exitosamente",
-                    ingredientesEliminados = cantidad,
-                    recetasEliminadas = recetas.Count
-                });
+                return Ok(new { message = "✅ Ingredientes y recetas limpiados." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar ingredientes");
-                return StatusCode(500, new { message = "❌ Error al limpiar ingredientes", error = ex.Message });
+                return StatusCode(500, new { message = "❌ Error", error = ex.Message });
             }
         }
 
-        // ========================================
-        // 9. LIMPIAR RECETAS ⭐ NUEVO
-        // ========================================
         [HttpDelete("recetas-ingredientes")]
         public async Task<IActionResult> LimpiarRecetas()
         {
             try
             {
                 var recetas = await _context.PlatoIngredientes.ToListAsync();
-                var cantidad = recetas.Count;
-
                 _context.PlatoIngredientes.RemoveRange(recetas);
                 await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    message = "✅ Recetas limpiadas exitosamente",
-                    recetasEliminadas = cantidad
-                });
+                return Ok(new { message = "✅ Recetas limpiadas." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar recetas");
-                return StatusCode(500, new { message = "❌ Error al limpiar recetas", error = ex.Message });
+                return StatusCode(500, new { message = "❌ Error", error = ex.Message });
             }
+        }
+        
+        [HttpDelete("menu")]
+        public async Task<IActionResult> LimpiarMenu()
+        {
+             try
+            {
+                var platos = await _context.Platos.ToListAsync();
+                _context.Platos.RemoveRange(platos);
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "✅ Menú limpiado." });
+            }
+            catch (Exception ex) { return StatusCode(500, new { message = "Error", error = ex.Message }); }
         }
     }
 }

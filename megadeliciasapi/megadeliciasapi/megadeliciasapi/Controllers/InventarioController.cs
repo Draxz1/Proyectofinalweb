@@ -21,6 +21,7 @@ namespace megadeliciasapi.Controllers
             _logger = logger;
         }
 
+        // GET: api/Inventario/productos
         [HttpGet("productos")]
         public async Task<ActionResult<IEnumerable<ProductoDto>>> GetProductos(
             [FromQuery] bool? soloActivos = null,
@@ -29,41 +30,34 @@ namespace megadeliciasapi.Controllers
         {
             try
             {
-                var query = _context.Productos.AsQueryable();
+                // Usamos InventarioItems que es la tabla real vinculada a Cocina
+                var query = _context.InventarioItems.Include(i => i.Categoria).AsQueryable();
 
-                if (soloActivos == true)
-                {
+                if (soloActivos == true) 
                     query = query.Where(p => p.Activo);
-                }
 
-                if (!string.IsNullOrEmpty(categoria))
-                {
-                    query = query.Where(p => p.Categoria == categoria);
-                }
+                if (!string.IsNullOrEmpty(categoria)) 
+                    query = query.Where(p => p.Categoria.Nombre == categoria);
 
-                if (stockBajo == true)
-                {
-                    query = query.Where(p => p.Stock <= p.StockMinimo);
-                }
+                if (stockBajo == true) 
+                    query = query.Where(p => p.StockActual <= p.StockMinimo);
 
-                var productos = await query
-                    .OrderBy(p => p.Categoria)
-                    .ThenBy(p => p.Nombre)
-                    .ToListAsync();
+                var items = await query.OrderBy(p => p.Nombre).ToListAsync();
 
-                var productosDto = productos.Select(p => new ProductoDto
+                // Mapeo a ProductoDto para compatibilidad con el frontend
+                var productosDto = items.Select(p => new ProductoDto
                 {
                     Id = p.Id,
                     Nombre = p.Nombre,
-                    Descripcion = p.Descripcion,
-                    Categoria = p.Categoria,
-                    PrecioUnitario = p.PrecioUnitario,
-                    Stock = p.Stock,
+                    Descripcion = p.Nombre, // InventarioItem no tiene descripción, usamos nombre
+                    Categoria = p.Categoria != null ? p.Categoria.Nombre : "Sin Categoría",
+                    PrecioUnitario = p.CostoUnitario,
+                    Stock = p.StockActual,
                     StockMinimo = p.StockMinimo,
                     UnidadMedida = p.UnidadMedida,
                     Activo = p.Activo,
-                    FechaCreacion = p.FechaCreacion,
-                    FechaActualizacion = p.FechaActualizacion
+                    FechaCreacion = p.CreadoEn,
+                    FechaActualizacion = DateTime.Now
                 }).ToList();
 
                 return Ok(productosDto);
@@ -75,72 +69,84 @@ namespace megadeliciasapi.Controllers
             }
         }
 
+        // GET: api/Inventario/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductoDto>> GetProducto(int id)
         {
             try
             {
-                var producto = await _context.Productos.FindAsync(id);
+                var p = await _context.InventarioItems
+                    .Include(i => i.Categoria)
+                    .FirstOrDefaultAsync(i => i.Id == id);
 
-                if (producto == null)
-                {
-                    return NotFound(new { message = "Producto no encontrado" });
-                }
+                if (p == null) return NotFound(new { message = "Producto no encontrado" });
 
-                var productoDto = new ProductoDto
+                var dto = new ProductoDto
                 {
-                    Id = producto.Id,
-                    Nombre = producto.Nombre,
-                    Descripcion = producto.Descripcion,
-                    Categoria = producto.Categoria,
-                    PrecioUnitario = producto.PrecioUnitario,
-                    Stock = producto.Stock,
-                    StockMinimo = producto.StockMinimo,
-                    UnidadMedida = producto.UnidadMedida,
-                    Activo = producto.Activo,
-                    FechaCreacion = producto.FechaCreacion,
-                    FechaActualizacion = producto.FechaActualizacion
+                    Id = p.Id,
+                    Nombre = p.Nombre,
+                    Descripcion = p.Nombre,
+                    Categoria = p.Categoria != null ? p.Categoria.Nombre : "Sin Categoría",
+                    PrecioUnitario = p.CostoUnitario,
+                    Stock = p.StockActual,
+                    StockMinimo = p.StockMinimo,
+                    UnidadMedida = p.UnidadMedida,
+                    Activo = p.Activo,
+                    FechaCreacion = p.CreadoEn,
+                    FechaActualizacion = DateTime.Now
                 };
 
-                return Ok(productoDto);
+                return Ok(dto);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener producto {Id}", id);
-                return StatusCode(500, new { message = "Error al obtener producto" });
+                return StatusCode(500, new { message = "Error interno" });
             }
         }
 
+        // POST: api/Inventario/crear-producto
         [HttpPost("crear-producto")]
         public async Task<ActionResult> CrearProducto([FromBody] CrearProductoDto dto)
         {
             try
             {
-                var existe = await _context.Productos
+                // Validación de duplicados
+                var existe = await _context.InventarioItems
                     .AnyAsync(p => p.Nombre.ToLower() == dto.Nombre.ToLower());
 
                 if (existe)
-                {
                     return BadRequest(new { message = "Ya existe un producto con ese nombre" });
+
+                // Gestionar categoría (buscar o crear)
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.Nombre.ToLower() == dto.Categoria.ToLower());
+
+                if (categoria == null)
+                {
+                    // CORRECCIÓN: Eliminada la propiedad 'Descripcion' que causaba error
+                    categoria = new Categoria { Nombre = dto.Categoria };
+                    _context.Categorias.Add(categoria);
+                    await _context.SaveChangesAsync();
                 }
 
-                var producto = new Producto
+                var item = new InventarioItem
                 {
                     Nombre = dto.Nombre,
-                    Descripcion = dto.Descripcion,
-                    Categoria = dto.Categoria,
-                    PrecioUnitario = dto.PrecioUnitario,
-                    Stock = dto.Stock,
+                    Codigo = dto.Codigo,
+                    CategoriaId = categoria.Id,
+                    StockActual = dto.Stock,
                     StockMinimo = dto.StockMinimo,
+                    CostoUnitario = dto.PrecioUnitario,
                     UnidadMedida = dto.UnidadMedida ?? "Unidad",
                     Activo = true,
-                    FechaCreacion = DateTime.Now
+                    CreadoEn = DateTime.Now
                 };
 
-                _context.Productos.Add(producto);
+                _context.InventarioItems.Add(item);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Producto creado exitosamente", productoId = producto.Id });
+                return Ok(new { message = "Producto creado exitosamente", productoId = item.Id });
             }
             catch (Exception ex)
             {
@@ -149,35 +155,40 @@ namespace megadeliciasapi.Controllers
             }
         }
 
+        // PUT: api/Inventario/{id}
         [HttpPut("{id}")]
         public async Task<ActionResult> ActualizarProducto(int id, [FromBody] ActualizarProductoDto dto)
         {
             try
             {
-                var producto = await _context.Productos.FindAsync(id);
+                var item = await _context.InventarioItems.FindAsync(id);
+                if (item == null) return NotFound(new { message = "Producto no encontrado" });
 
-                if (producto == null)
-                {
-                    return NotFound(new { message = "Producto no encontrado" });
-                }
-
-                var nombreDuplicado = await _context.Productos
+                var nombreDuplicado = await _context.InventarioItems
                     .AnyAsync(p => p.Nombre.ToLower() == dto.Nombre.ToLower() && p.Id != id);
 
                 if (nombreDuplicado)
-                {
                     return BadRequest(new { message = "Ya existe otro producto con ese nombre" });
+
+                // Actualizar Categoría si cambió
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.Nombre.ToLower() == dto.Categoria.ToLower());
+                
+                if (categoria == null)
+                {
+                    categoria = new Categoria { Nombre = dto.Categoria };
+                    _context.Categorias.Add(categoria);
+                    await _context.SaveChangesAsync();
                 }
 
-                producto.Nombre = dto.Nombre;
-                producto.Descripcion = dto.Descripcion;
-                producto.Categoria = dto.Categoria;
-                producto.PrecioUnitario = dto.PrecioUnitario;
-                producto.Stock = dto.Stock;
-                producto.StockMinimo = dto.StockMinimo;
-                producto.UnidadMedida = dto.UnidadMedida ?? "Unidad";
-                producto.Activo = dto.Activo;
-                producto.FechaActualizacion = DateTime.Now;
+                item.Nombre = dto.Nombre;
+                item.CategoriaId = categoria.Id;
+                item.CostoUnitario = dto.PrecioUnitario;
+                item.StockActual = dto.Stock;
+                item.StockMinimo = dto.StockMinimo;
+                item.UnidadMedida = dto.UnidadMedida ?? "Unidad";
+                item.Activo = dto.Activo;
+                // item.FechaActualizacion = DateTime.Now; // Si tienes este campo, descoméntalo
 
                 await _context.SaveChangesAsync();
 
@@ -190,21 +201,16 @@ namespace megadeliciasapi.Controllers
             }
         }
 
+        // DELETE: api/Inventario/{id}
         [HttpDelete("{id}")]
         public async Task<ActionResult> EliminarProducto(int id)
         {
             try
             {
-                var producto = await _context.Productos.FindAsync(id);
+                var item = await _context.InventarioItems.FindAsync(id);
+                if (item == null) return NotFound(new { message = "Producto no encontrado" });
 
-                if (producto == null)
-                {
-                    return NotFound(new { message = "Producto no encontrado" });
-                }
-
-                producto.Activo = false;
-                producto.FechaActualizacion = DateTime.Now;
-
+                item.Activo = false;
                 await _context.SaveChangesAsync();
 
                 return Ok(new { message = "Producto desactivado exitosamente" });
@@ -216,109 +222,28 @@ namespace megadeliciasapi.Controllers
             }
         }
 
-        [HttpPut("{id}/stock")]
-        public async Task<ActionResult> ActualizarStock(int id, [FromBody] ActualizarStockDto dto)
-        {
-            try
-            {
-                var producto = await _context.Productos.FindAsync(id);
-
-                if (producto == null)
-                {
-                    return NotFound(new { message = "Producto no encontrado" });
-                }
-
-                if (dto.Tipo.ToUpper() == "SALIDA" && producto.Stock < dto.Cantidad)
-                {
-                    return BadRequest(new { message = "Stock insuficiente para realizar la salida" });
-                }
-
-                if (dto.Tipo.ToUpper() == "ENTRADA")
-                {
-                    producto.Stock += dto.Cantidad;
-                }
-                else if (dto.Tipo.ToUpper() == "SALIDA")
-                {
-                    producto.Stock -= dto.Cantidad;
-                }
-
-                producto.FechaActualizacion = DateTime.Now;
-                await _context.SaveChangesAsync();
-
-                return Ok(new { 
-                    message = "Stock actualizado exitosamente",
-                    nuevoStock = producto.Stock
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al actualizar stock del producto {Id}", id);
-                return StatusCode(500, new { message = "Error al actualizar stock" });
-            }
-        }
-
-        [HttpGet("categorias")]
-        public async Task<ActionResult<IEnumerable<string>>> GetCategorias()
-        {
-            try
-            {
-                var categorias = await _context.Productos
-                    .Where(p => p.Activo)
-                    .Select(p => p.Categoria)
-                    .Distinct()
-                    .OrderBy(c => c)
-                    .ToListAsync();
-
-                return Ok(categorias);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener categorías");
-                return StatusCode(500, new { message = "Error al obtener categorías" });
-            }
-        }
-
-        [HttpGet("stock-bajo")]
-        public async Task<ActionResult<IEnumerable<ProductoDto>>> GetProductosStockBajo()
-        {
-            try
-            {
-                var productos = await _context.Productos
-                    .Where(p => p.Activo && p.Stock <= p.StockMinimo)
-                    .OrderBy(p => p.Stock)
-                    .ToListAsync();
-
-                var productosDto = productos.Select(p => new ProductoDto
-                {
-                    Id = p.Id,
-                    Nombre = p.Nombre,
-                    Descripcion = p.Descripcion,
-                    Categoria = p.Categoria,
-                    PrecioUnitario = p.PrecioUnitario,
-                    Stock = p.Stock,
-                    StockMinimo = p.StockMinimo,
-                    UnidadMedida = p.UnidadMedida,
-                    Activo = p.Activo,
-                    FechaCreacion = p.FechaCreacion,
-                    FechaActualizacion = p.FechaActualizacion
-                }).ToList();
-
-                return Ok(productosDto);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener productos con stock bajo");
-                return StatusCode(500, new { message = "Error al obtener productos con stock bajo" });
-            }
-        }
-
+        // GET: api/Inventario/movimientos-recientes
         [HttpGet("movimientos-recientes")]
-        public async Task<ActionResult<IEnumerable<MovimientoDto>>> GetMovimientosRecientes(
-            [FromQuery] int cantidad = 20)
+        public async Task<ActionResult<IEnumerable<MovimientoDto>>> GetMovimientosRecientes([FromQuery] int cantidad = 20)
         {
             try
             {
-                var movimientos = new List<MovimientoDto>();
+                var movimientos = await _context.InventarioMovimientos
+                    .Include(m => m.InventarioItem)
+                    .OrderByDescending(m => m.Fecha)
+                    .Take(cantidad)
+                    .Select(m => new MovimientoDto
+                    {
+                        Id = m.Id,
+                        Fecha = m.Fecha,
+                        ProductoNombre = m.InventarioItem != null ? m.InventarioItem.Nombre : "Item Eliminado",
+                        Tipo = m.Tipo,
+                        Cantidad = m.Cantidad,
+                        CostoUnitario = m.CostoUnitario,
+                        Motivo = m.Motivo ?? "Sin motivo"
+                    })
+                    .ToListAsync();
+
                 return Ok(movimientos);
             }
             catch (Exception ex)
@@ -328,128 +253,127 @@ namespace megadeliciasapi.Controllers
             }
         }
 
+        // POST: api/Inventario/registrar-movimiento
         [HttpPost("registrar-movimiento")]
         public async Task<ActionResult> RegistrarMovimiento([FromBody] RegistrarMovimientoDto dto)
         {
             try
             {
-                var producto = await _context.Productos.FindAsync(dto.ProductoId);
+                var item = await _context.InventarioItems.FindAsync(dto.ProductoId);
+                if (item == null) return NotFound(new { message = "Producto no encontrado" });
 
-                if (producto == null)
-                {
-                    return NotFound(new { message = "Producto no encontrado" });
-                }
+                if (dto.Cantidad <= 0) return BadRequest(new { message = "La cantidad debe ser mayor a 0" });
 
-                if (dto.Cantidad <= 0)
-                {
-                    return BadRequest(new { message = "La cantidad debe ser mayor a 0" });
-                }
-
-                if (dto.Tipo.ToUpper() == "SALIDA" && producto.Stock < dto.Cantidad)
-                {
-                    return BadRequest(new { 
-                        message = $"Stock insuficiente. Disponible: {producto.Stock}, Solicitado: {dto.Cantidad}" 
-                    });
-                }
-
-                if (dto.Tipo.ToUpper() == "ENTRADA" && (!dto.CostoUnitario.HasValue || dto.CostoUnitario <= 0))
-                {
-                    return BadRequest(new { message = "El costo unitario es requerido para entradas" });
-                }
+                if (dto.Tipo.ToUpper() == "SALIDA" && item.StockActual < dto.Cantidad)
+                    return BadRequest(new { message = $"Stock insuficiente. Disp: {item.StockActual}" });
 
                 if (dto.Tipo.ToUpper() == "ENTRADA")
                 {
-                    producto.Stock += dto.Cantidad;
-                    if (dto.CostoUnitario.HasValue)
-                    {
-                        producto.PrecioUnitario = dto.CostoUnitario.Value;
-                    }
+                    item.StockActual += dto.Cantidad;
+                    if (dto.CostoUnitario.HasValue && dto.CostoUnitario > 0)
+                        item.CostoUnitario = dto.CostoUnitario.Value;
                 }
-                else if (dto.Tipo.ToUpper() == "SALIDA")
+                else // SALIDA
                 {
-                    producto.Stock -= dto.Cantidad;
+                    item.StockActual -= dto.Cantidad;
                 }
 
-                producto.FechaActualizacion = DateTime.Now;
+                var movimiento = new InventarioMovimiento
+                {
+                    ItemId = item.Id,
+                    Tipo = dto.Tipo,
+                    Cantidad = dto.Cantidad,
+                    CostoUnitario = item.CostoUnitario,
+                    Motivo = dto.Motivo ?? "Movimiento Manual",
+                    Fecha = DateTime.Now
+                };
+
+                _context.InventarioMovimientos.Add(movimiento);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { 
-                    message = "Movimiento registrado exitosamente",
-                    nuevoStock = producto.Stock
-                });
+                return Ok(new { message = "Movimiento registrado", nuevoStock = item.StockActual });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar movimiento");
-                return StatusCode(500, new { message = "Error al registrar movimiento" });
+                return StatusCode(500, new { message = "Error interno" });
             }
         }
 
-    public class ProductoDto
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = string.Empty;
-        public string? Descripcion { get; set; }
-        public string Categoria { get; set; } = string.Empty;
-        public decimal PrecioUnitario { get; set; }
-        public int Stock { get; set; }
-        public int StockMinimo { get; set; }
-        public string? UnidadMedida { get; set; }
-        public bool Activo { get; set; }
-        public DateTime FechaCreacion { get; set; }
-        public DateTime? FechaActualizacion { get; set; }
-    }
+        // GET: api/Inventario/categorias
+        [HttpGet("categorias")]
+        public async Task<ActionResult<IEnumerable<string>>> GetCategorias()
+        {
+            return Ok(await _context.Categorias.Select(c => c.Nombre).ToListAsync());
+        }
 
-    public class CrearProductoDto
-    {
-        public string Nombre { get; set; } = string.Empty;
-        public string? Descripcion { get; set; }
-        public string Categoria { get; set; } = string.Empty;
-        public decimal PrecioUnitario { get; set; }
-        public int Stock { get; set; }
-        public int StockMinimo { get; set; }
-        public string? UnidadMedida { get; set; }
-        public string? Codigo { get; set; }
-    }
+        // --- DTOs ACTUALIZADOS (Inicializados para evitar CS8618) ---
 
-    public class ActualizarProductoDto
-    {
-        public string Nombre { get; set; } = string.Empty;
-        public string? Descripcion { get; set; }
-        public string Categoria { get; set; } = string.Empty;
-        public decimal PrecioUnitario { get; set; }
-        public int Stock { get; set; }
-        public int StockMinimo { get; set; }
-        public string? UnidadMedida { get; set; }
-        public bool Activo { get; set; }
-    }
+        public class ProductoDto
+        {
+            public int Id { get; set; }
+            public string Nombre { get; set; } = string.Empty;
+            public string? Descripcion { get; set; }
+            public string Categoria { get; set; } = string.Empty;
+            public decimal PrecioUnitario { get; set; }
+            public int Stock { get; set; }
+            public int StockMinimo { get; set; }
+            public string? UnidadMedida { get; set; }
+            public bool Activo { get; set; }
+            public DateTime FechaCreacion { get; set; }
+            public DateTime? FechaActualizacion { get; set; }
+        }
 
-    public class ActualizarStockDto
-    {
-        public int Cantidad { get; set; }
-        public string Tipo { get; set; } = string.Empty;
-        public string? Razon { get; set; }
-    }
+        public class CrearProductoDto
+        {
+            public string Nombre { get; set; } = string.Empty;
+            public string? Descripcion { get; set; }
+            public string Categoria { get; set; } = string.Empty;
+            public decimal PrecioUnitario { get; set; }
+            public int Stock { get; set; }
+            public int StockMinimo { get; set; }
+            public string? UnidadMedida { get; set; }
+            public string? Codigo { get; set; }
+        }
 
-    public class MovimientoDto
-    {
-        public int Id { get; set; }
-        public DateTime Fecha { get; set; }
-        public string ProductoNombre { get; set; } = string.Empty;
-        public string Tipo { get; set; } = string.Empty;
-        public int Cantidad { get; set; }
-        public decimal CostoUnitario { get; set; }
-        public string Motivo { get; set; } = string.Empty;
-    }
+        public class ActualizarProductoDto
+        {
+            public string Nombre { get; set; } = string.Empty;
+            public string? Descripcion { get; set; }
+            public string Categoria { get; set; } = string.Empty;
+            public decimal PrecioUnitario { get; set; }
+            public int Stock { get; set; }
+            public int StockMinimo { get; set; }
+            public string? UnidadMedida { get; set; }
+            public bool Activo { get; set; }
+        }
 
-    public class RegistrarMovimientoDto
-    {
-        public int ProductoId { get; set; }
-        public string Tipo { get; set; } = string.Empty;
-        public int Cantidad { get; set; }
-        public decimal? CostoUnitario { get; set; }
-        public string? Motivo { get; set; }
-        public int? UsuarioId { get; set; }
-    }
+        public class ActualizarStockDto
+        {
+            public int Cantidad { get; set; }
+            public string Tipo { get; set; } = string.Empty;
+            public string? Razon { get; set; }
+        }
+
+        public class MovimientoDto
+        {
+            public int Id { get; set; }
+            public DateTime Fecha { get; set; }
+            public string ProductoNombre { get; set; } = string.Empty;
+            public string Tipo { get; set; } = string.Empty;
+            public int Cantidad { get; set; }
+            public decimal CostoUnitario { get; set; }
+            public string Motivo { get; set; } = string.Empty;
+        }
+
+        public class RegistrarMovimientoDto
+        {
+            public int ProductoId { get; set; }
+            public string Tipo { get; set; } = string.Empty;
+            public int Cantidad { get; set; }
+            public decimal? CostoUnitario { get; set; }
+            public string? Motivo { get; set; }
+            public int? UsuarioId { get; set; }
+        }
     }
 }
